@@ -76,7 +76,7 @@
 
 
 #include "d_main.h"
-#include "rest_api/api.h"
+#include "api.h"
 
 //
 // D-DoomLoop()

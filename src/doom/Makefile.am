@@ -74,8 +74,8 @@ deh_thing.c                                \
 deh_weapon.c
 
 FEATURE_REST_API_SOURCE_FILES =            \
-rest_api/api.c      rest_api/api.h         \
-rest_api/cJSON.c    rest_api/cJSON.h
+api.c      api.h         \
+api_cJSON.c    api_cJSON.h
 
 libdoom_a_SOURCES = $(SOURCE_FILES)                   \
                     $(FEATURE_DEHACKED_SOURCE_FILES)  \

@@ -9,7 +9,7 @@
 #include "../d_event.h"
 #include "../doomkeys.h"
 #include "p_local.h"
-#include "cJSON.h"
+#include "api_cJSON.h"
 
 extern  player_t  players[MAXPLAYERS];
 extern void P_KillMobj( mobj_t* source, mobj_t* target );
