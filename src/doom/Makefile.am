@@ -75,7 +75,9 @@ deh_weapon.c
 
 FEATURE_REST_API_SOURCE_FILES =            \
 api.c      api.h         \
-api_cJSON.c    api_cJSON.h
+api_cJSON.c    api_cJSON.h \
+api_player_controller.c api_player_controller.h \
+api_world_controller.c api_world_controller.h
 
 libdoom_a_SOURCES = $(SOURCE_FILES)                   \
                     $(FEATURE_DEHACKED_SOURCE_FILES)  \
