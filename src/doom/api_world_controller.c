@@ -123,10 +123,13 @@ char* GetMobjTypeName(mobj_t *mo) {
     return "";
 }
 
-cJSON *DescribeGameState() {
+cJSON *DescribeWorldState() {
   cJSON *root = cJSON_CreateObject();
   cJSON_AddNumberToObject(root, "episode", gameepisode);
   cJSON_AddNumberToObject(root, "map", gamemap);
+
+  sector_t *sector = players[CONSOLE_PLAYER].mo->subsector->sector;
+  cJSON_AddStringToObject(root, "lights", sector->lightlevel == 75 ? "off" : "on");
   return root;
 }
 
@@ -134,7 +137,7 @@ cJSON *DescribeGameState() {
 // Controller methods
 
 api_response_t API_GetWorld(cJSON *req) {
-  return (api_response_t) { 200, DescribeGameState() };
+  return (api_response_t) { 200, DescribeWorldState() };
 }
 
 api_response_t API_PatchWorld(cJSON *req) {
@@ -152,7 +155,19 @@ api_response_t API_PatchWorld(cJSON *req) {
   if (changed) {
     G_DeferedInitNew (gameskill, gameepisode, gamemap);
   }
-  return (api_response_t) { 200, DescribeGameState() };
+
+  val = cJSON_GetObjectItem(req, "lights");
+  if (val) {
+    if (strcmp(val->valuestring, "on") == 0) {
+        struct line_s *line = players[CONSOLE_PLAYER].mo->subsector->sector->lines[0];
+        EV_LightTurnOn(line, 255);
+    }
+    else {
+        struct line_s *line = players[CONSOLE_PLAYER].mo->subsector->sector->lines[0];
+        EV_LightTurnOn(line, 75);
+    }
+  }
+  return (api_response_t) { 200, DescribeWorldState() };
 }
 
 api_response_t API_PostWorldObjects(cJSON *req)
@@ -181,21 +196,41 @@ api_response_t API_PostWorldObjects(cJSON *req)
     return resp;
 }
 
-api_response_t API_GetWorldObjects()
+api_response_t API_GetWorldObjects(int max_distance)
 {
     cJSON *root = cJSON_CreateArray();
     mobj_t *t;
+    mobj_t * player = players[CONSOLE_PLAYER].mo;
     for (int i = 0; i < numsectors; i++) {
         t = sectors[i].thinglist;
         while (t)
         {
+            float dist = API_FixedToFloat(P_AproxDistance(player->x - t->x, player->y - t->y));
+            if ((max_distance > 0 && dist > max_distance) || mobjinfo[t->type].doomednum == -1)
+            {
+                t = t->snext;
+                continue;
+            }
+
             cJSON *objJson = DescribeMObj(t);
+            cJSON_AddNumberToObject(objJson, "distance", dist);
             cJSON_AddItemToArray(root, objJson);
             t = t->snext;
         }
     }
     api_response_t resp = {200, root};
     return resp;
+}
+
+void flipFlag(mobj_t *t, int mask, boolean on) {
+    if (on) 
+    {
+        t->flags |= mask;
+    }
+    else 
+    {
+        t->flags &= ~mask;
+    }
 }
 
 api_response_t API_PatchWorldObject(int id, cJSON *req)
@@ -224,6 +259,18 @@ api_response_t API_PatchWorldObject(int id, cJSON *req)
 
     val = cJSON_GetObjectItem(req, "health");
     if (val) obj->health = val->valueint;
+
+    cJSON *flags = cJSON_GetObjectItem(req, "flags");
+    if (flags) {
+        val = cJSON_GetObjectItem(flags, "MF_SHOOTABLE");
+        if (val) flipFlag(obj, MF_SHOOTABLE, val->valueint == 1); 
+        val = cJSON_GetObjectItem(flags, "MF_SHADOW");
+        if (val) flipFlag(obj, MF_SHADOW, val->valueint == 1); 
+        val = cJSON_GetObjectItem(flags, "MF_NOBLOOD");
+        if (val) flipFlag(obj, MF_NOBLOOD, val->valueint == 1); 
+        val = cJSON_GetObjectItem(flags, "MF_NOGRAVITY");
+        if (val) flipFlag(obj, MF_NOGRAVITY, val->valueint == 1); 
+    }
 
     cJSON* root = DescribeMObj(obj);
     api_response_t resp = {200, root};
@@ -254,8 +301,9 @@ api_response_t API_GetWorldObject(int id)
     return resp;
 }
 
-api_response_t API_GetWorldDoors()
+api_response_t API_GetWorldDoors(int max_distance)
 {
+    mobj_t * player = players[CONSOLE_PLAYER].mo;
     int sectorIds[512];
     int sectorCount = 0;
     cJSON *root = cJSON_CreateArray();
@@ -263,7 +311,7 @@ api_response_t API_GetWorldDoors()
     for (int i = 0; i < numlines; i++)
     {
         line_t *line = &lines[i];
-        sector_t *sec = sides[ line->sidenum[1]].sector;
+        sector_t *sec = sides[line->sidenum[1]].sector;
         int seenSector = 0;
         for (int j = 0; j < sectorCount; j++)
         {
@@ -277,8 +325,14 @@ api_response_t API_GetWorldDoors()
         {
             continue;
         }
-        
-        cJSON_AddItemToArray(root, DescribeDoor(i, line));
+
+        float dist = API_FixedToFloat(P_AproxDistance(player->x - line->v1->x, player->y - line->v1->y));
+        if (max_distance == 0 || dist < max_distance)
+        {
+            cJSON *door = DescribeDoor(i, line);
+            cJSON_AddNumberToObject(door, "distance", dist);
+            cJSON_AddItemToArray(root, door);
+        }
         sectorIds[sectorCount++] = sec->id;
     }
     api_response_t resp = {200, root};
@@ -309,6 +363,7 @@ api_response_t API_PatchWorldDoor(int id, cJSON *req)
         if ((strcmp(state->valuestring, "open") == 0 && sec->floorheight == sec->ceilingheight) ||
             (strcmp(state->valuestring, "closed") == 0 && sec->floorheight != sec->ceilingheight))
         {
+            //EV_DoDoor(&lines[id], vld_open);
             EV_VerticalDoor(&lines[id], players[CONSOLE_PLAYER].mo);
         }
     }
@@ -316,4 +371,3 @@ api_response_t API_PatchWorldDoor(int id, cJSON *req)
     api_response_t resp = {200, door};
     return resp;
 }
-

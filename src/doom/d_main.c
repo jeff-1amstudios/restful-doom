@@ -1871,8 +1871,8 @@ void D_DoomMain (void)
     if (p)
     {
         int port = atoi(myargv[p+1]);
-        API_Init(port);
         printf ("API_Init: Init RESTful API daemon.\n");
+        API_Init(port);
     }
 	
     if (startloadgame >= 0)

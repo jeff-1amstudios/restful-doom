@@ -9,22 +9,24 @@
 #include "../d_event.h"
 #include "../doomkeys.h"
 #include "p_local.h"
-#include "api_cJSON.h"
 #include "api_player_controller.h"
 #include "api_world_controller.h"
 
-extern int    numsectors;
-extern sector_t*  sectors;
-extern int      numlines;
-extern line_t*      lines;
+extern api_obj_description_t api_descriptors[];
+char path[100];
+char hud_message[512];
 
 TCPsocket server_sd;
 TCPsocket client_sd;
 SDLNet_SocketSet set;
 
 void API_AfterTic();
-api_response_t API_RouteRequest(char *method, char *path, char *body);
+boolean API_ParseRequest(char *buffer, int buffer_len, api_request_t *request);
+api_response_t API_RouteRequest(api_request_t request);
 void API_SendResponse(api_response_t resp);
+
+// externally-defined game variables
+extern player_t players[MAXPLAYERS];
 
 void API_Init(int port)
 {
@@ -76,34 +78,26 @@ void API_RunIO()
         recv_len = SDLNet_TCP_Recv(client_sd, buffer, 1024);
         if (recv_len > 0)
         {
-            buffer[recv_len] = 0;  //-1 to chop off last
-            int pos = strstr(buffer, "\r\n") - buffer;
-            char first_line[512];
-            first_line[pos] = 0;
-            strncpy(first_line, buffer, pos);
-            int pos2 = (strstr(buffer, "\r\n\r\n") - buffer) + 4;
-            char body[512];
-            strcpy(body, &buffer[pos2]);
-
-            char method[20];
-            char path[100];
-            char protocol[10];
+            api_request_t request;
             api_response_t response;
-            int ret = sscanf(first_line, "%s%s%s", method, path, protocol);
-            if (ret != 3) {
-                response = API_CreateErrorResponse(400, "invalid request");
+            if (API_ParseRequest(buffer, recv_len, &request)) {
+                char msg[512];
+                snprintf(msg, 512, "%s %s", request.method, request.full_path);
+                API_SetHUDMessage(msg);
+                response = API_RouteRequest(request);
             }
-            else {
-                response = API_RouteRequest(method, path, body);    
+            else 
+            {
+                response = API_CreateErrorResponse(400, "invalid request");
             }
 
             API_SendResponse(response);
 
-            // IPaddress *remote_ip;
-            // remote_ip = SDLNet_TCP_GetPeerAddress(client_sd);
-
             // access log
-            printf("access_log: 127.0.0.1 - - - \"%s %s\" %d\n", method, path, response.status_code);
+            IPaddress *remote_ip;
+            remote_ip = SDLNet_TCP_GetPeerAddress(client_sd);
+            const char *ip_str = SDLNet_ResolveIP(remote_ip);
+            printf("access_log: %s - - - \"%s %s\" %d\n", ip_str, request.method, request.full_path, response.status_code);
 
             SDLNet_TCP_DelSocket(set, client_sd);
             SDLNet_TCP_Close(client_sd);
@@ -111,22 +105,53 @@ void API_RunIO()
     }
 }
 
+boolean API_ParseRequest(char *buffer, int buffer_len, api_request_t *request)
+{
+    buffer[buffer_len] = 0;
+    char method[10];
+    char protocol[10];
+    int ret = sscanf(buffer, "%s%s%s", method, path, protocol);
+    if (ret != 3) {
+        return false;
+    }
+
+    strncpy(request->full_path, path, 512);
+
+    struct yuarel url;
+    if (-1 == yuarel_parse(&url, path)) {
+        return false;
+    }
+    printf("url: %s, %s\n", url.path, url.query);
+    char *http_entity_body = strstr(buffer, "\r\n\r\n");
+    if (http_entity_body == NULL)
+    {
+        return false;
+    }
+
+    request->url = url;
+    strncpy(request->method, method, 10);
+    request->body = http_entity_body;
+    return true;
+}
+
 
 // ----
 //  Route an http path + method to an action
 // ----
-api_response_t API_RouteRequest(char *method, char *path, char *body) 
+api_response_t API_RouteRequest(api_request_t req)
 {
-    cJSON *json = cJSON_Parse(body);
+    char *method = req.method;
+    char *path = req.url.path;
+    cJSON *json = cJSON_Parse(req.body);
     
-    if (strcmp(path, "/api/message") == 0)
+    if (strcmp(path, "api/message") == 0)
     {
         if (strcmp(method, "POST") == 0)
         {
             return API_PostMessage(json);
         }     
     }
-    else if (strcmp(path, "/api/player") == 0) 
+    else if (strcmp(path, "api/player") == 0)
     {
         if (strcmp(method, "PATCH") == 0) 
         {
@@ -140,14 +165,14 @@ api_response_t API_RouteRequest(char *method, char *path, char *body)
             return API_DeletePlayer();
         }
     }
-    else if (strcmp(path, "/api/player/actions") == 0)
+    else if (strcmp(path, "api/player/actions") == 0)
     {
         if (strcmp(method, "POST") == 0)
         {
             return API_PostPlayerAction(json);
         }
     }
-    else if (strcmp(path, "/api/world") == 0) {
+    else if (strcmp(path, "api/world") == 0) {
         if (strcmp(method, "GET") == 0) {
             return API_GetWorld();
         }
@@ -155,7 +180,7 @@ api_response_t API_RouteRequest(char *method, char *path, char *body)
             return API_PatchWorld(json);
         }
     }
-    else if (strcmp(path, "/api/world/objects") == 0)
+    else if (strcmp(path, "api/world/objects") == 0)
     {
         if (strcmp(method, "POST") == 0) 
         {
@@ -163,12 +188,20 @@ api_response_t API_RouteRequest(char *method, char *path, char *body)
         }
         else if (strcmp(method, "GET") == 0)
         {
-            return API_GetWorldObjects();
+            int distance = 0;
+            struct yuarel_param params[1];
+            int p = yuarel_parse_query(req.url.query, '&', params, 1);
+            while (p-- > 0) {
+                if (strcmp("distance", params[p].key) == 0) {
+                    distance = atoi(params[p].val);
+                }
+            }
+            return API_GetWorldObjects(distance);
         }
     }
-    else if (strstr(path, "/api/world/objects/") != NULL) {
+    else if (strstr(path, "api/world/objects/") != NULL) {
         int id;
-        if (sscanf(path, "/api/world/objects/%d", &id) != 1) {
+        if (sscanf(path, "api/world/objects/%d", &id) != 1) {
             return API_CreateErrorResponse(404, "path not found");
         }
         if (strcmp(method, "DELETE") == 0)
@@ -184,16 +217,24 @@ api_response_t API_RouteRequest(char *method, char *path, char *body)
             return API_PatchWorldObject(id, json);
         }
     }
-    else if (strcmp(path, "/api/world/doors") == 0) {
+    else if (strcmp(path, "api/world/doors") == 0) {
         if (strcmp(method, "GET") == 0)
         {
-            return API_GetWorldDoors();
+            int distance = 0;
+            struct yuarel_param params[1];
+            int p = yuarel_parse_query(req.url.query, '&', params, 1);
+            while (p-- > 0) {
+                if (strcmp("distance", params[p].key) == 0) {
+                    distance = atoi(params[p].val);
+                }
+            }
+            return API_GetWorldDoors(distance);
         }
     }
-    else if (strstr(path, "/api/world/doors") != NULL)
+    else if (strstr(path, "api/world/doors") != NULL)
     {
         int id;
-        if (sscanf(path, "/api/world/doors/%d", &id) != 1) {
+        if (sscanf(path, "api/world/doors/%d", &id) != 1) {
             return API_CreateErrorResponse(404, "path not found");
         }
         if (strcmp(method, "PATCH") == 0)
@@ -277,6 +318,15 @@ cJSON* DescribeMObj(mobj_t *obj)
     cJSON_AddNumberToObject(root, "health", obj->health);
     cJSON_AddNumberToObject(root, "type", mobjinfo[obj->type].doomednum);
 
+    // this is... inefficient :(
+    for (int i = 0; i < NUMDESCRIPTIONS; i++)
+    {
+        if (api_descriptors[i].id == mobjinfo[obj->type].doomednum) {
+            cJSON_AddStringToObject(root, "description", api_descriptors[i].text);
+            break;
+        }
+    }
+
     cJSON *flags = cJSON_CreateObject();
     if (obj->flags & MF_SPECIAL) cJSON_AddTrueToObject(flags, "MF_SPECIAL");
     if (obj->flags & MF_SOLID) cJSON_AddTrueToObject(flags, "MF_SOLID");
@@ -308,4 +358,10 @@ cJSON* DescribeMObj(mobj_t *obj)
 
     cJSON_AddItemToObject(root, "flags", flags);
     return root;
+}
+
+void API_SetHUDMessage(char *msg)
+{
+    strncpy(hud_message, msg, 512);
+    players[CONSOLE_PLAYER].message = hud_message;
 }

@@ -10,20 +10,13 @@
 #include "../doomkeys.h"
 #include "p_local.h"
 
-#define CONSOLE_PLAYER 0
-
 // externally-defined game variables
 extern player_t players[MAXPLAYERS];
 extern void P_KillMobj( mobj_t* source, mobj_t* target );
 
-// locals
-char player_message[512];
-
 api_response_t API_PostMessage(cJSON *req)
 {
-    memset(player_message, 0, 512);
-    sprintf(player_message, "%s", cJSON_GetObjectItem(req, "text")->valuestring);
-    players[CONSOLE_PLAYER].message = player_message;
+    API_SetHUDMessage(cJSON_GetObjectItem(req, "text")->valuestring);
     return (api_response_t){ 201, NULL };
 }
 
@@ -125,4 +118,5 @@ api_response_t API_PatchPlayer(cJSON *req)
 api_response_t API_DeletePlayer() {
   player_t *player = &players[CONSOLE_PLAYER];  
   P_KillMobj(NULL, player->mo);
+  return API_GetPlayer();
 }

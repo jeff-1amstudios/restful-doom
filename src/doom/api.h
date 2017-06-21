@@ -3,10 +3,12 @@
 
 #include <string.h>
 #include "api_cJSON.h"
+#include "api_yuarel.h"
 
 #include "p_local.h"
 #include "m_fixed.h"
 
+#define CONSOLE_PLAYER 0
 #define NUMKEYS   256
 int keys_down[NUMKEYS];
 
@@ -15,6 +17,20 @@ void API_RunIO();
 float API_FixedToFloat(fixed_t fixed);
 fixed_t API_FloatToFixed(float val);
 cJSON* DescribeMObj(mobj_t *obj);
+void API_SetHUDMessage(char *msg);
+
+#define NUMDESCRIPTIONS 125
+typedef struct {
+  int id;
+  char *text;
+} api_obj_description_t;
+
+typedef struct {
+  char method[10];
+  char full_path[512];
+  struct yuarel url;
+  char *body;
+} api_request_t;
 
 typedef struct {
   int status_code;
