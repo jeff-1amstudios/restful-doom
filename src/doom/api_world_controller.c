@@ -175,7 +175,9 @@ api_response_t API_PostWorldObjects(cJSON *req)
     mobj_t *pobj = players[CONSOLE_PLAYER].mo;
     fixed_t angle = pobj->angle >> ANGLETOFINESHIFT;
     fixed_t x, y;
-    int dist = 9990048;
+
+    cJSON *val = cJSON_GetObjectItem(req, "distance");
+    int dist = API_FloatToFixed(val->valueint);
     x = pobj->x + FixedMul(dist, finecosine[angle]); 
     y = pobj->y + FixedMul(dist, finesine[angle]);
 
@@ -222,17 +224,6 @@ api_response_t API_GetWorldObjects(int max_distance)
     return resp;
 }
 
-void flipFlag(mobj_t *t, int mask, boolean on) {
-    if (on) 
-    {
-        t->flags |= mask;
-    }
-    else 
-    {
-        t->flags &= ~mask;
-    }
-}
-
 api_response_t API_PatchWorldObject(int id, cJSON *req)
 {
     mobj_t *obj = FindObjectById(id);
@@ -263,13 +254,13 @@ api_response_t API_PatchWorldObject(int id, cJSON *req)
     cJSON *flags = cJSON_GetObjectItem(req, "flags");
     if (flags) {
         val = cJSON_GetObjectItem(flags, "MF_SHOOTABLE");
-        if (val) flipFlag(obj, MF_SHOOTABLE, val->valueint == 1); 
+        if (val) API_FlipFlag(&obj->flags, MF_SHOOTABLE, val->valueint == 1);
         val = cJSON_GetObjectItem(flags, "MF_SHADOW");
-        if (val) flipFlag(obj, MF_SHADOW, val->valueint == 1); 
+        if (val) API_FlipFlag(&obj->flags, MF_SHADOW, val->valueint == 1);
         val = cJSON_GetObjectItem(flags, "MF_NOBLOOD");
-        if (val) flipFlag(obj, MF_NOBLOOD, val->valueint == 1); 
+        if (val) API_FlipFlag(&obj->flags, MF_NOBLOOD, val->valueint == 1);
         val = cJSON_GetObjectItem(flags, "MF_NOGRAVITY");
-        if (val) flipFlag(obj, MF_NOGRAVITY, val->valueint == 1); 
+        if (val) API_FlipFlag(&obj->flags, MF_NOGRAVITY, val->valueint == 1);
     }
 
     cJSON* root = DescribeMObj(obj);

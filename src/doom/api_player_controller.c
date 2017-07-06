@@ -12,6 +12,7 @@
 
 // externally-defined game variables
 extern player_t players[MAXPLAYERS];
+extern void P_FireWeapon (player_t* player);
 extern void P_KillMobj( mobj_t* source, mobj_t* target );
 
 api_response_t API_PostMessage(cJSON *req)
@@ -59,12 +60,7 @@ api_response_t API_PostPlayerAction(cJSON *req)
     }
     else if (strcmp(type, "shoot") == 0)
     {
-        keys_down[KEY_RCTRL] = 40;
-        event_t event;
-        event.type = ev_keydown;
-        event.data1 = KEY_RCTRL;
-        event.data2 = 0;
-        D_PostEvent(&event);
+        P_FireWeapon(&players[CONSOLE_PLAYER]);
     }
     else {
         return API_CreateErrorResponse(400, "invalid action type");
@@ -98,20 +94,29 @@ api_response_t API_GetPlayer()
 api_response_t API_PatchPlayer(cJSON *req)
 {
     player_t *player = &players[CONSOLE_PLAYER];
-    cJSON *prop = cJSON_GetObjectItem(req, "weapon");
-    if (prop)
+    cJSON *val = cJSON_GetObjectItem(req, "weapon");
+    if (val)
     {
-        int weapon = prop->valueint;
+        int weapon = val->valueint;
         if (!player->weaponowned[weapon]) {
             return API_CreateErrorResponse(400, "player does not have requested weapon");
         }
         player->pendingweapon = weapon;
     }
-    prop = cJSON_GetObjectItem(req, "armor");
-    if (prop)
+    val = cJSON_GetObjectItem(req, "armor");
+    if (val)
     {
-        player->armorpoints = prop->valueint;
+        player->armorpoints = val->valueint;
     }
+    cJSON *flags = cJSON_GetObjectItem(req, "cheatFlags");
+    if (flags)
+    {
+      val = cJSON_GetObjectItem(flags, "CF_GODMODE");
+      if (val) API_FlipFlag(&player->cheats, CF_GODMODE, val->valueint == 1);
+      val = cJSON_GetObjectItem(flags, "CF_NOCLIP");
+      if (val) API_FlipFlag(&player->cheats, CF_NOCLIP, val->valueint == 1);
+    }
+
     return API_GetPlayer();
 }
 

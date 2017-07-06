@@ -103,6 +103,8 @@ void API_RunIO()
             SDLNet_TCP_Close(client_sd);
         }
     }
+
+    API_AfterTic();
 }
 
 boolean API_ParseRequest(char *buffer, int buffer_len, api_request_t *request)
@@ -231,7 +233,7 @@ api_response_t API_RouteRequest(api_request_t req)
             return API_GetWorldDoors(distance);
         }
     }
-    else if (strstr(path, "api/world/doors") != NULL)
+    else if (strstr(path, "api/world/doors/") != NULL)
     {
         int id;
         if (sscanf(path, "api/world/doors/%d", &id) != 1) {
@@ -256,13 +258,16 @@ void API_SendResponse(api_response_t resp) {
     if (SDLNet_TCP_Send(client_sd, (void *)buffer, len) < len) {
         printf("failed to send all bytes\n");
     }
-    char *jsonToString = cJSON_Print(resp.json);
-    len = strlen(jsonToString);
-    if (SDLNet_TCP_Send(client_sd, (void *)jsonToString, len) < len) {
-        printf("failed to send all bytes\n");
+    if (resp.json)
+    {
+        char *jsonToString = cJSON_Print(resp.json);
+        len = strlen(jsonToString);
+        if (SDLNet_TCP_Send(client_sd, (void *)jsonToString, len) < len) {
+            printf("failed to send all bytes\n");
+        }
+        free(jsonToString);
+        cJSON_Delete(resp.json);
     }
-    free(jsonToString);
-    cJSON_Delete(resp.json);
 }
 
 api_response_t API_CreateErrorResponse(int status, char *message) {
@@ -364,4 +369,15 @@ void API_SetHUDMessage(char *msg)
 {
     strncpy(hud_message, msg, 512);
     players[CONSOLE_PLAYER].message = hud_message;
+}
+
+void API_FlipFlag(int *flags, int mask, boolean on) {
+    if (on)
+    {
+        *flags |= mask;
+    }
+    else
+    {
+        *flags &= ~mask;
+    }
 }
