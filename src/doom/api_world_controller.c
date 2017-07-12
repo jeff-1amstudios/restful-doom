@@ -6,6 +6,8 @@
 
 #define CONSOLE_PLAYER 0
 
+extern api_obj_description_t api_descriptors[];
+
 // externally-defined game variables
 extern player_t         players[MAXPLAYERS];
 extern  skill_t         gameskill;
@@ -43,7 +45,6 @@ cJSON* DescribeDoor(int id, line_t *line)
     cJSON *door = cJSON_CreateObject();
     cJSON_AddNumberToObject(door, "id", id);
     cJSON_AddNumberToObject(door, "specialType", line->special);
-    cJSON_AddNumberToObject(door, "sec", sec->id);
     cJSON_AddStringToObject(door, "state", sec->floorheight == sec->ceilingheight ? "closed" : "open");
     char *key_color = "none";
     switch (line->special) {
@@ -59,23 +60,27 @@ cJSON* DescribeDoor(int id, line_t *line)
             key_color = "red";
             break;
     }
-    //if (key_color != NULL) {
-        cJSON_AddStringToObject(door, "key", key_color);
-    //}
+    cJSON_AddStringToObject(door, "keyRequired", key_color);
     return door;
 }
 
 
-int GetInternalTypeIdFromDoomEdNum(int nbr)
+int GetInternalTypeIdFromObjectDescription(char *objectDescription)
 {
-    for (int i = 0; i < NUMMOBJTYPES; i++)
+    for (int i = 0; i < NUMDESCRIPTIONS; i++)
     {
-        if (mobjinfo[i].doomednum == nbr)
-        {
-            return i;
+        if (strcmp(api_descriptors[i].text, objectDescription) == 0) {
+            for (int j = 0; j < NUMMOBJTYPES; j++)
+            {
+                if (mobjinfo[j].doomednum == api_descriptors[i].id)
+                {
+                    return j;
+                }
+            }
+            break;
         }
     }
-    return -1;    
+    return -1;
 }
 
 mobj_t *FindObjectById(long id) 
@@ -93,35 +98,7 @@ mobj_t *FindObjectById(long id)
     }
     return NULL;
 }
-            
 
-int GetMobjTypeFromString(char *s) {
-    if (strcmp(s, "MT_TROOP") == 0) {
-        return MT_TROOP;
-    }
-    else if (strcmp(s, "MT_POSSESSED") == 0) {
-        return MT_POSSESSED;
-    }
-    else if (strcmp(s, "MT_SHOTGUY") == 0) {
-        return MT_SHOTGUY;
-    }
-    else if (strcmp(s, "MT_SERGEANT") == 0) {
-        return MT_SERGEANT;
-    }
-    else if (strcmp(s, "MT_HEAD") == 0) {
-        return MT_HEAD;
-    }
-    else if (strcmp(s, "MT_BRUISER") == 0) {
-        return MT_BRUISER;
-    }
-    else {
-        return MT_BARREL;
-    }
-}
-
-char* GetMobjTypeName(mobj_t *mo) {
-    return "";
-}
 
 cJSON *DescribeWorldState() {
   cJSON *root = cJSON_CreateObject();
@@ -181,18 +158,21 @@ api_response_t API_PostWorldObjects(cJSON *req)
     x = pobj->x + FixedMul(dist, finecosine[angle]); 
     y = pobj->y + FixedMul(dist, finesine[angle]);
 
-    int typeId = cJSON_GetObjectItem(req, "type")->valueint;
-    int typeNbr = GetInternalTypeIdFromDoomEdNum(typeId);
+    char *type = cJSON_GetObjectItem(req, "type")->valuestring;
+    int typeNbr = GetInternalTypeIdFromObjectDescription(type);
     if (typeNbr == -1)
     {
-        return API_CreateErrorResponse(400, "typeId not found");
+        return API_CreateErrorResponse(400, "type not found");
     }
 
     mobj_t *mobj = P_SpawnMobj(x, y, ONCEILINGZ, typeNbr);
-    // if (mobj->info->seestate != S_NULL && P_LookForPlayers (mobj, true))
-    // {
-    //     P_SetMobjState (mobj, mobj->info->seestate);
-    // }
+
+    val = cJSON_GetObjectItem(req, "angle");
+    if (val)
+    {
+        mobj->angle = degreesToAngle(val->valueint);
+    }
+
     cJSON *root = DescribeMObj(mobj);
     api_response_t resp = {201, root};
     return resp;
@@ -251,6 +231,17 @@ api_response_t API_PatchWorldObject(int id, cJSON *req)
     val = cJSON_GetObjectItem(req, "health");
     if (val) obj->health = val->valueint;
 
+    val = cJSON_GetObjectItem(req, "attacking");
+    if (val)
+    {
+        mobj_t *obj_to_attack = FindObjectById(val->valueint);
+        if (!obj) {
+            return API_CreateErrorResponse(400, "attacking object not valid");
+        }
+        obj->target = obj_to_attack;
+        P_SetMobjState (obj, obj->info->seestate);
+    }
+
     cJSON *flags = cJSON_GetObjectItem(req, "flags");
     if (flags) {
         val = cJSON_GetObjectItem(flags, "MF_SHOOTABLE");
@@ -262,7 +253,6 @@ api_response_t API_PatchWorldObject(int id, cJSON *req)
         val = cJSON_GetObjectItem(flags, "MF_NOGRAVITY");
         if (val) API_FlipFlag(&obj->flags, MF_NOGRAVITY, val->valueint == 1);
     }
-
     cJSON* root = DescribeMObj(obj);
     api_response_t resp = {200, root};
     return resp;
@@ -360,5 +350,15 @@ api_response_t API_PatchWorldDoor(int id, cJSON *req)
     }
     cJSON *door = DescribeDoor(id, &lines[id]);
     api_response_t resp = {200, door};
+    return resp;
+}
+
+api_response_t API_GetWorldScreenshot()
+{
+    unlink("/tmp/DOOM00.pcx");
+    V_ScreenShot("/tmp/DOOM%02i.%s");
+    cJSON *body = cJSON_CreateObject();
+    cJSON_AddStringToObject(body, "path", "/tmp/DOOM00.pcx");
+    api_response_t resp = {200, body};
     return resp;
 }

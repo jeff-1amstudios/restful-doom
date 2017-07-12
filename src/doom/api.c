@@ -182,6 +182,11 @@ api_response_t API_RouteRequest(api_request_t req)
             return API_PatchWorld(json);
         }
     }
+    else if (strcmp(path, "api/world/screenshot") == 0) {
+        if (strcmp(method, "GET") == 0) {
+            return API_GetWorldScreenshot();
+        }
+    }
     else if (strcmp(path, "api/world/objects") == 0)
     {
         if (strcmp(method, "POST") == 0) 
@@ -321,15 +326,19 @@ cJSON* DescribeMObj(mobj_t *obj)
     cJSON_AddNumberToObject(root, "angle", angleToDegrees(obj->angle));
     cJSON_AddNumberToObject(root, "height", API_FixedToFloat(obj->height));
     cJSON_AddNumberToObject(root, "health", obj->health);
-    cJSON_AddNumberToObject(root, "type", mobjinfo[obj->type].doomednum);
+    cJSON_AddNumberToObject(root, "typeId", mobjinfo[obj->type].doomednum);
 
     // this is... inefficient :(
     for (int i = 0; i < NUMDESCRIPTIONS; i++)
     {
         if (api_descriptors[i].id == mobjinfo[obj->type].doomednum) {
-            cJSON_AddStringToObject(root, "description", api_descriptors[i].text);
+            cJSON_AddStringToObject(root, "type", api_descriptors[i].text);
             break;
         }
+    }
+
+    if (obj->target) {
+        cJSON_AddNumberToObject(root, "attacking", obj->target->id);
     }
 
     cJSON *flags = cJSON_CreateObject();
