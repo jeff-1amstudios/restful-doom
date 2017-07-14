@@ -123,7 +123,6 @@ boolean API_ParseRequest(char *buffer, int buffer_len, api_request_t *request)
     if (-1 == yuarel_parse(&url, path)) {
         return false;
     }
-    printf("url: %s, %s\n", url.path, url.query);
     char *http_entity_body = strstr(buffer, "\r\n\r\n");
     if (http_entity_body == NULL)
     {
@@ -138,7 +137,7 @@ boolean API_ParseRequest(char *buffer, int buffer_len, api_request_t *request)
 
 
 // ----
-//  Route an http path + method to an action
+//  Route an http path + method to a controller action
 // ----
 api_response_t API_RouteRequest(api_request_t req)
 {
@@ -151,7 +150,8 @@ api_response_t API_RouteRequest(api_request_t req)
         if (strcmp(method, "POST") == 0)
         {
             return API_PostMessage(json);
-        }     
+        } 
+        return API_CreateErrorResponse(405, "Method not allowed");
     }
     else if (strcmp(path, "api/player") == 0)
     {
@@ -166,6 +166,7 @@ api_response_t API_RouteRequest(api_request_t req)
         else if (strcmp(method, "DELETE") == 0) {
             return API_DeletePlayer();
         }
+        return API_CreateErrorResponse(405, "Method not allowed");
     }
     else if (strcmp(path, "api/player/actions") == 0)
     {
@@ -173,6 +174,7 @@ api_response_t API_RouteRequest(api_request_t req)
         {
             return API_PostPlayerAction(json);
         }
+        return API_CreateErrorResponse(405, "Method not allowed");
     }
     else if (strcmp(path, "api/world") == 0) {
         if (strcmp(method, "GET") == 0) {
@@ -181,11 +183,13 @@ api_response_t API_RouteRequest(api_request_t req)
         else if (strcmp(method, "PATCH") == 0) {
             return API_PatchWorld(json);
         }
+        return API_CreateErrorResponse(405, "Method not allowed");
     }
     else if (strcmp(path, "api/world/screenshot") == 0) {
         if (strcmp(method, "GET") == 0) {
             return API_GetWorldScreenshot();
         }
+        return API_CreateErrorResponse(405, "Method not allowed");
     }
     else if (strcmp(path, "api/world/objects") == 0)
     {
@@ -205,6 +209,7 @@ api_response_t API_RouteRequest(api_request_t req)
             }
             return API_GetWorldObjects(distance);
         }
+        return API_CreateErrorResponse(405, "Method not allowed");
     }
     else if (strstr(path, "api/world/objects/") != NULL) {
         int id;
@@ -223,6 +228,7 @@ api_response_t API_RouteRequest(api_request_t req)
         {
             return API_PatchWorldObject(id, json);
         }
+        return API_CreateErrorResponse(405, "Method not allowed");
     }
     else if (strcmp(path, "api/world/doors") == 0) {
         if (strcmp(method, "GET") == 0)
@@ -237,6 +243,7 @@ api_response_t API_RouteRequest(api_request_t req)
             }
             return API_GetWorldDoors(distance);
         }
+        return API_CreateErrorResponse(405, "Method not allowed");
     }
     else if (strstr(path, "api/world/doors/") != NULL)
     {
@@ -252,6 +259,7 @@ api_response_t API_RouteRequest(api_request_t req)
         {
             return API_GetWorldDoor(id);
         }
+        return API_CreateErrorResponse(405, "Method not allowed");
     }
     return API_CreateErrorResponse(404, "Not found");
 }
