@@ -10,6 +10,8 @@
 
 #define CONSOLE_PLAYER 0
 #define NUMKEYS   256
+#define NUMDESCRIPTIONS 125
+
 int keys_down[NUMKEYS];
 
 void API_Init(int port);
@@ -20,7 +22,7 @@ cJSON* DescribeMObj(mobj_t *obj);
 void API_SetHUDMessage(char *msg);
 void API_FlipFlag(int *flags, int mask, boolean on);
 
-#define NUMDESCRIPTIONS 125
+
 typedef struct {
   int id;
   char *text;

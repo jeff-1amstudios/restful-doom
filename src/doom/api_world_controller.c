@@ -19,52 +19,6 @@ angle_t degreesToAngle(int degrees) {
     return ((float)degrees / 360) * ANG_MAX;
 }
 
-boolean IsLineADoor(line_t *line) 
-{
-    switch (line->special) 
-    {
-        case 1:        // Vertical Door
-        case 26:      // Blue Door/Locked
-        case 27:      // Yellow Door /Locked
-        case 28:      // Red Door /Locked
-        case 31:      // Manual door open
-        case 32:      // Blue locked door open
-        case 33:      // Red locked door open
-        case 34:      // Yellow locked door open
-        case 117:     // Blazing door raise
-        case 118:     // Blazing door open
-            return true;
-        default:
-            return false;
-    }
-}
-
-cJSON* DescribeDoor(int id, line_t *line)
-{
-    sector_t *sec = sides[line->sidenum[1]].sector;
-    cJSON *door = cJSON_CreateObject();
-    cJSON_AddNumberToObject(door, "id", id);
-    cJSON_AddNumberToObject(door, "specialType", line->special);
-    cJSON_AddStringToObject(door, "state", sec->floorheight == sec->ceilingheight ? "closed" : "open");
-    char *key_color = "none";
-    switch (line->special) {
-        case 26:
-        case 32:
-            key_color = "blue";
-            break;
-        case 27:
-        case 34:
-            key_color = "yellow";
-        case 28:
-        case 33:
-            key_color = "red";
-            break;
-    }
-    cJSON_AddStringToObject(door, "keyRequired", key_color);
-    return door;
-}
-
-
 int GetInternalTypeIdFromObjectDescription(char *objectDescription)
 {
     for (int i = 0; i < NUMDESCRIPTIONS; i++)
@@ -151,12 +105,26 @@ api_response_t API_PostWorldObjects(cJSON *req)
 {
     mobj_t *pobj = players[CONSOLE_PLAYER].mo;
     fixed_t angle = pobj->angle >> ANGLETOFINESHIFT;
-    fixed_t x, y;
+    fixed_t x, y, z;
 
     cJSON *val = cJSON_GetObjectItem(req, "distance");
-    int dist = API_FloatToFixed(val->valueint);
-    x = pobj->x + FixedMul(dist, finecosine[angle]); 
-    y = pobj->y + FixedMul(dist, finesine[angle]);
+    if (val)
+    {
+        int dist = API_FloatToFixed(val->valueint);
+        x = pobj->x + FixedMul(dist, finecosine[angle]);
+        y = pobj->y + FixedMul(dist, finesine[angle]);
+        z = ONCEILINGZ;
+    }
+    else
+    {
+        cJSON *pos = cJSON_GetObjectItem(req, "position");
+        val = cJSON_GetObjectItem(pos, "x");
+        x = API_FloatToFixed(val->valuedouble);
+        val = cJSON_GetObjectItem(pos, "y");
+        y = API_FloatToFixed(val->valuedouble);
+        val = cJSON_GetObjectItem(pos, "z");
+        z = API_FloatToFixed(val->valuedouble);
+    }
 
     char *type = cJSON_GetObjectItem(req, "type")->valuestring;
     int typeNbr = GetInternalTypeIdFromObjectDescription(type);
@@ -165,13 +133,13 @@ api_response_t API_PostWorldObjects(cJSON *req)
         return API_CreateErrorResponse(400, "type not found");
     }
 
-    mobj_t *mobj = P_SpawnMobj(x, y, ONCEILINGZ, typeNbr);
+    mobj_t *mobj = P_SpawnMobj(x, y, z, typeNbr);
 
     val = cJSON_GetObjectItem(req, "angle");
-    if (val)
-    {
-        mobj->angle = degreesToAngle(val->valueint);
-    }
+    if (val) mobj->angle = degreesToAngle(val->valueint);
+
+    val = cJSON_GetObjectItem(req, "id");
+    if (val) mobj->id = val->valueint;
 
     cJSON *root = DescribeMObj(mobj);
     api_response_t resp = {201, root};
@@ -279,77 +247,6 @@ api_response_t API_GetWorldObject(int id)
     }
     cJSON* root = DescribeMObj(obj);
     api_response_t resp = {200, root};
-    return resp;
-}
-
-api_response_t API_GetWorldDoors(int max_distance)
-{
-    mobj_t * player = players[CONSOLE_PLAYER].mo;
-    int sectorIds[512];
-    int sectorCount = 0;
-    cJSON *root = cJSON_CreateArray();
-
-    for (int i = 0; i < numlines; i++)
-    {
-        line_t *line = &lines[i];
-        sector_t *sec = sides[line->sidenum[1]].sector;
-        int seenSector = 0;
-        for (int j = 0; j < sectorCount; j++)
-        {
-            if (sectorIds[j] == sec->id)
-            {
-                seenSector = 1;
-                break;
-            }
-        }
-        if (seenSector || !IsLineADoor(line))
-        {
-            continue;
-        }
-
-        float dist = API_FixedToFloat(P_AproxDistance(player->x - line->v1->x, player->y - line->v1->y));
-        if (max_distance == 0 || dist < max_distance)
-        {
-            cJSON *door = DescribeDoor(i, line);
-            cJSON_AddNumberToObject(door, "distance", dist);
-            cJSON_AddItemToArray(root, door);
-        }
-        sectorIds[sectorCount++] = sec->id;
-    }
-    api_response_t resp = {200, root};
-    return resp;
-}
-
-api_response_t API_GetWorldDoor(int id)
-{
-    if (!IsLineADoor(&lines[id]))
-    {
-        return API_CreateErrorResponse(404, "door does not exist");
-    }
-    cJSON *door = DescribeDoor(id, &lines[id]);
-    api_response_t resp = {200, door};
-    return resp;
-}
-
-api_response_t API_PatchWorldDoor(int id, cJSON *req)
-{
-    if (!IsLineADoor(&lines[id]))
-    {
-        return API_CreateErrorResponse(404, "door does not exist");
-    }
-    cJSON *state = cJSON_GetObjectItem(req, "state");
-    if (state)
-    {
-        sector_t *sec = sides[lines[id].sidenum[1]].sector;                
-        if ((strcmp(state->valuestring, "open") == 0 && sec->floorheight == sec->ceilingheight) ||
-            (strcmp(state->valuestring, "closed") == 0 && sec->floorheight != sec->ceilingheight))
-        {
-            //EV_DoDoor(&lines[id], vld_open);
-            EV_VerticalDoor(&lines[id], players[CONSOLE_PLAYER].mo);
-        }
-    }
-    cJSON *door = DescribeDoor(id, &lines[id]);
-    api_response_t resp = {200, door};
     return resp;
 }
 

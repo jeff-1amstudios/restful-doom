@@ -11,6 +11,7 @@
 #include "p_local.h"
 #include "api_player_controller.h"
 #include "api_world_controller.h"
+#include "api_door_controller.h"
 
 extern api_obj_description_t api_descriptors[];
 char path[100];
@@ -241,7 +242,7 @@ api_response_t API_RouteRequest(api_request_t req)
                     distance = atoi(params[p].val);
                 }
             }
-            return API_GetWorldDoors(distance);
+            return API_GetDoors(distance);
         }
         return API_CreateErrorResponse(405, "Method not allowed");
     }
@@ -253,11 +254,11 @@ api_response_t API_RouteRequest(api_request_t req)
         }
         if (strcmp(method, "PATCH") == 0)
         {
-            return API_PatchWorldDoor(id, json);
+            return API_PatchDoor(id, json);
         }
         else if (strcmp(method, "GET") == 0)
         {
-            return API_GetWorldDoor(id);
+            return API_GetDoor(id);
         }
         return API_CreateErrorResponse(405, "Method not allowed");
     }

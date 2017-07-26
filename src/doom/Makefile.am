@@ -79,6 +79,7 @@ api_cJSON.c    api_cJSON.h \
 api_yuarel.c    api_yuarel.h \
 api_player_controller.c api_player_controller.h \
 api_world_controller.c api_world_controller.h \
+api_door_controller.c api_door_controller.h \
 api_obj_descriptions.c
 
 libdoom_a_SOURCES = $(SOURCE_FILES)                   \
