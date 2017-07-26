@@ -151,7 +151,7 @@ WINDOWS_RC_VERSION=`echo $PACKAGE_VERSION | sed 's/-.*//; s/\./, /g; s/$/, 0/'`
 # if this is changed to "lemon-", the programs generated will be named
 # lemon-doom, lemon-heretic, etc.
 
-PROGRAM_PREFIX=chocolate-
+PROGRAM_PREFIX=restful-
 
 AC_SUBST(PROGRAM_PREFIX)
 AC_DEFINE_UNQUOTED(PROGRAM_PREFIX, "$PROGRAM_PREFIX",
@@ -183,36 +183,16 @@ AC_DEFUN([AC_DATAROOTDIR_CHECKED])
 
 AC_OUTPUT([
 Makefile
-man/Makefile
-man/bash-completion/Makefile
 opl/Makefile
 opl/examples/Makefile
 pcsound/Makefile
-pkg/Makefile
-pkg/config.make
-pkg/osx/Info-gnustep.plist
-pkg/osx/Info.plist
 rpm.spec
 data/Makefile
 src/Makefile
-src/doom.appdata.xml
-src/doom.desktop
-src/doom-screensaver.desktop
 src/doom/Makefile
-src/heretic.appdata.xml
-src/heretic.desktop
-src/heretic/Makefile
-src/hexen.appdata.xml
-src/hexen.desktop
-src/hexen/Makefile
 src/resource.rc
 src/setup-res.rc
 src/setup/Makefile
-src/setup/setup.desktop
-src/setup/setup-manifest.xml
-src/strife.appdata.xml
-src/strife.desktop
-src/strife/Makefile
 textscreen/Makefile
 textscreen/examples/Makefile
 ])

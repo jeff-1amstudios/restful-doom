@@ -9,8 +9,4 @@ api_response_t API_PatchWorldObject(int id, cJSON *req);
 api_response_t API_DeleteWorldObject(int id);
 api_response_t API_GetWorldObject(int id);
 
-api_response_t API_GetWorldDoors(int max_distance);
-api_response_t API_GetWorldDoor(int id);
-api_response_t API_PatchWorldDoor(int id, cJSON *req);
-
 api_response_t API_GetWorldScreenshot();
