@@ -2,27 +2,13 @@ AUX_DIST_GEN =                          \
         $(ac_aux_dir)/install-sh        \
         $(ac_aux_dir)/missing
 
-DOC_FILES=                              \
-        README                          \
-        README.Music                    \
-        NEWS                            \
-        PHILOSOPHY                      \
-        ChangeLog
-
 EXTRA_DIST=                             \
         $(AUX_DIST_GEN)                 \
-        $(MSVC_FILES)                   \
-        $(CODEBLOCKS_FILES)             \
-        $(DOC_FILES)                    \
-        NOT-BUGS                        \
-        README.Strife                   \
         .lvimrc                         \
-        HACKING                         \
-        TODO                            \
         rpm.spec
 
 doomdocsdir = ${docdir}/../${PROGRAM_PREFIX}doom
-doomdocs_DATA = $(DOC_FILES) NOT-BUGS
+doomdocs_DATA = $(DOC_FILES)
 
 MAINTAINERCLEANFILES =  $(AUX_DIST_GEN)
 

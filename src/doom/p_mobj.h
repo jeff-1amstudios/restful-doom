@@ -279,7 +279,7 @@ typedef struct mobj_s
 
 
     // uniquely identify this object. (incremented for each new mobj spawned)
-    long id;
+    int id;
     
 } mobj_t;
 

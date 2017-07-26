@@ -193,6 +193,8 @@ src/doom/Makefile
 src/resource.rc
 src/setup-res.rc
 src/setup/Makefile
+src/setup/setup.desktop
+src/setup/setup-manifest.xml
 textscreen/Makefile
 textscreen/examples/Makefile
 ])
