@@ -45,6 +45,7 @@ cJSON* DescribeDoor(int id, line_t *line)
         case 27:
         case 34:
             key_color = "yellow";
+            break;
         case 28:
         case 33:
             key_color = "red";
