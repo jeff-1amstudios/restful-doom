@@ -19,7 +19,19 @@ RESTFul-DOOM is built on top of the awesome [chocolate-doom](https://github.com/
 
 ## Building
 
+We need to build via the chocolate-doom installer, as it takes care of building and configuring dependencies like SDL.
+```
+git clone https://github.com/chocolate-doom/chocpkg
+cd chocpkg
 
+echo 'description "Doom hosting a RESTful api"
+dependencies SDL2 SDL2_mixer SDL2_net
+variant latest fetch_git \
+    https://github.com/jeff-1amstudios/restful-doom.git master
+build_autotools' > pkgdef/restful-doom.sh
+
+chocpkg/chocpkg build restful-doom/latest
+```
 
 ## Thanks to
 
