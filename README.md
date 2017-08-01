@@ -19,19 +19,28 @@ RESTFul-DOOM is built on top of the awesome [chocolate-doom](https://github.com/
 
 ## Building
 
-We need to build via the chocolate-doom installer, as it takes care of building and configuring dependencies like SDL.
+### Building dependencies (needs to be run once)
+
+`chocpkg` is the installer made by chocolate-doom, we use it to take care of building and configuring dependencies like SDL.
 ```
-git clone https://github.com/chocolate-doom/chocpkg
 cd chocpkg
+chocpkg/chocpkg build restful-doom
+```
 
-echo 'description "Doom hosting a RESTful api"
-dependencies SDL2 SDL2_mixer SDL2_net
-variant latest fetch_git \
-    https://github.com/jeff-1amstudios/restful-doom.git master
-build_autotools' > pkgdef/restful-doom.sh
+### Compiling
 
-chocpkg/chocpkg build restful-doom/latest
+Run `make` from the root directory. A `restful-doom` binary will be created in the same location.
+
+## Running
+
+The DOOM engine is open source, but assets (art, maps etc) are not. You'll need to download an appropriate [WAD file](https://en.wikipedia.org/wiki/Doom_WAD) separately.
+
+To run restful-doom on port 6666:
+```
+./restful-doom -iwad <path/to/doom1.wad> -apiport 6666 ...
 ```
 
 ## Thanks to
-
+[chocolate-doom](https://github.com/chocolate-doom/chocolate-doom) team  
+[cJSON](https://github.com/DaveGamble/cJSON) - JSON parsing / generation  
+[yuarel](https://github.com/jacketizer/libyuarel/) - URL parsing  
