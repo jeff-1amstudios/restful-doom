@@ -2,6 +2,8 @@
 
 An HTTP + JSON API hosted inside the 1993 DOOM engine!
 
+![](http://1amstudios.com/img/restful-doom/header.jpg)
+
 RESTful-DOOM is a version of Doom which hosts a RESTful API! The API allows you to query and manipulate various game objects with standard HTTP requests as the game runs.
 
 There were a few challenges:
