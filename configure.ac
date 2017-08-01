@@ -1,12 +1,12 @@
-AC_INIT(Chocolate Doom, 2.2.1, fraggle@gmail.com, chocolate-doom)
+AC_INIT(RESTful Doom, 2.2.1, jeff@1amstudios.com, restful-doom)
 
 PACKAGE_SHORTNAME=${PACKAGE_NAME% Doom}
-PACKAGE_SHORTDESC="Conservative source port"
-PACKAGE_COPYRIGHT="Copyright (C) 1993-2015"
+PACKAGE_SHORTDESC="REST API inside DOOM"
+PACKAGE_COPYRIGHT=""
 PACKAGE_LICENSE="GNU General Public License, version 2"
-PACKAGE_MAINTAINER="Simon Howard"
-PACKAGE_URL="http://www.chocolate-doom.org/"
-PACKAGE_ISSUES="https://github.com/chocolate-doom/chocolate-doom/issues"
+PACKAGE_MAINTAINER="Jeff Harris"
+PACKAGE_URL="http://1amstudios.com/"
+PACKAGE_ISSUES="https://github.com/restful-doom/issues"
 
 AC_CONFIG_AUX_DIR(autotools)
 AC_CANONICAL_HOST
