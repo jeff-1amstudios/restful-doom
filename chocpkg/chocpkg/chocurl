@@ -1,0 +1,25 @@
+#!/bin/bash
+
+. chocpkg_functions.sh
+
+url=$1
+
+if have_tool curl; then
+    exec curl $url
+fi
+
+if have_tool wget; then
+    exec wget $url -O -
+fi
+
+# Desperate?
+
+for l in lynx links elinks; do
+    if have_tool $l; then
+        echo "Using $l to download $url..." >&2
+        exec $l -source $url
+    fi
+done
+
+error_exit "No tool available to retrieve URLs. Please install curl or wget."
+

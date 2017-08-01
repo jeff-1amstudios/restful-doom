@@ -1,0 +1,403 @@
+#!/bin/bash
+
+set -eu
+
+# set_chocpkg_root sets the CHOCPKG_ROOT environment variable based on the
+# path where the script is located.
+set_chocpkg_root() {
+    # Assume that the package root is one directory up from the script.
+    if [[ "$0" = /* ]]; then
+        local script_path="$0"
+    else
+        local script_path="$PWD/${0#./}"
+    fi
+    local script_dir=$(dirname "$script_path")
+    CHOCPKG_ROOT=$(dirname "$script_dir")
+
+    # Build directory must not contain a space, or bad things happen:
+    if [[ "$CHOCPKG_ROOT" = *\ * ]]; then
+        cat <<END
+        The build scripts are in a path containing a space:
+
+            $CHOCPKG_ROOT
+
+        Builds will probably fail - try moving the build scripts to a
+        different directory not containing a space.
+END
+        exit 1
+    fi
+}
+
+# basic_setup is invoked on script startup to set various environment variables
+# and create basic directories used throughout the rest of the script.
+basic_setup() {
+    if [ -z "${CHOCPKG_ROOT:-}" ]; then
+        set_chocpkg_root
+        PATH="$CHOCPKG_ROOT/chocpkg:$PATH"
+    fi
+
+    PACKAGES_DIR="$CHOCPKG_ROOT/packages"
+    INSTALL_DIR="$CHOCPKG_ROOT/install"
+    NATIVE_INSTALL_DIR="$CHOCPKG_ROOT/install.native"
+    BUILD_DIR="$CHOCPKG_ROOT/build"
+    NATIVE_BUILD_DIR="$CHOCPKG_ROOT/build.native"
+
+    mkdir -p "$PACKAGES_DIR" \
+             "$INSTALL_DIR" "$NATIVE_INSTALL_DIR" \
+             "$BUILD_DIR" "$NATIVE_BUILD_DIR"
+}
+
+basic_setup
+
+. chocpkg_functions.sh
+. chocpkg_modules.sh
+. "$CHOCPKG_ROOT/buildenv.sh"
+
+description() {
+    PACKAGE_DESCRIPTION="$*"
+}
+
+dependencies() {
+    DEPENDENCIES+=("$@")
+}
+
+set_dependencies_native() {
+    local i
+    for i in ${!DEPENDENCIES[@]}; do
+        local dep="${DEPENDENCIES[$i]}"
+        if [[ "$PACKAGE_TYPE" = native ]] && ! [[ "$dep" =~ native: ]]; then
+            DEPENDENCIES[$i]="native:$dep"
+        fi
+        i=$((i + 1))
+    done
+}
+
+variant() {
+    local for_variant=$1; shift
+    if [ "$PACKAGE_VARIANT" = "$for_variant" ]; then
+        "$@"
+    fi
+    ALL_VARIANTS+=("$for_variant")
+}
+
+# Check if the given variant was declared in the package file.
+valid_variant() {
+    local i for_variant=$1
+    for i in "${!ALL_VARIANTS[@]}"; do
+        local v="${ALL_VARIANTS[$i]}"
+        if [ "$v" = "$for_variant" ]; then
+            return 0
+        fi
+    done
+    false
+}
+
+# Get the default variant for the specified package. Usually this is the
+# stable variant but it can be overridden.
+package_default_variant() {
+    local i for_package=$1
+    for i in "${!LATEST_PACKAGES[@]}"; do
+        local v="${LATEST_PACKAGES[$i]}"
+        if [ "$v" = "$for_package" ]; then
+            echo "latest"
+            return
+        fi
+    done
+    echo "stable"
+}
+
+# Given a package name, find the pkgdef file associated with it, source
+# the contents of the file and set various variables.
+configure_for_package() {
+    local package=$1
+    PACKAGE_NAME=$package
+
+    # Allow type: prefix to specify PACKAGE_TYPE to install explicitly.
+    if [[ "$package" =~ .*:.* ]]; then
+        PACKAGE_TYPE=${package/%:*/}
+        package=${package/#*:/}
+    else
+        PACKAGE_TYPE=target
+    fi
+
+    # Allow /suffix to specify a variant to build.
+    if [[ "$package" =~ .*/.* ]]; then
+        PACKAGE_VARIANT=${package/#*\//}
+        package=${package/%\/*/}
+    else
+        PACKAGE_VARIANT=$(package_default_variant "$package")
+    fi
+
+    # Defaults before loading package file.
+    PACKAGE_DESCRIPTION="Package $package"
+    DEPENDENCIES=()
+    PACKAGE_DIR_NAME=$package
+    ALL_VARIANTS=()
+
+    local pkg_file="$CHOCPKG_ROOT/pkgdef/$package.sh"
+    if [ ! -e "$pkg_file" ]; then
+        error_exit "Package file $package.sh not found."
+    fi
+    . "$pkg_file"
+
+    # If the package defines no variants, we assume it only has stable.
+    if [ "${#ALL_VARIANTS[@]}" -eq 0 ]; then
+        ALL_VARIANTS=(stable)
+    fi
+
+    if ! valid_variant "$PACKAGE_VARIANT"; then
+        error_exit "Unknown variant $PACKAGE_VARIANT for package $package."
+    fi
+
+    # We set up build differently depending on the package type: some packages
+    # are for the target we're building for; others are native tools to run on
+    # the build machine as part of the build process.
+    case "$PACKAGE_TYPE" in
+        target)
+            PACKAGE_INSTALL_DIR="$INSTALL_DIR"
+            PACKAGE_BUILD_DIR="$BUILD_DIR/$PACKAGE_DIR_NAME"
+            ;;
+        native)
+            PACKAGE_INSTALL_DIR="$NATIVE_INSTALL_DIR"
+            PACKAGE_BUILD_DIR="$NATIVE_BUILD_DIR/$PACKAGE_DIR_NAME"
+
+            # When installing a native package, all its dependencies are
+            # necessarily native as well.
+            set_dependencies_native
+            ;;
+        *)
+            error_exit "Unknown package type $PACKAGE_TYPE"
+            ;;
+    esac
+}
+
+# setup_build_environment sets environment variables for build. This is
+# deliberately only done when needed, as otherwise the value could affect
+# child builds when recursing to build dependent packages.
+setup_build_environment() {
+    CPPFLAGS="-I$PACKAGE_INSTALL_DIR/include"
+    LDFLAGS="-L$PACKAGE_INSTALL_DIR/lib ${LDFLAGS:-}"
+    export CPPFLAGS LDFLAGS
+
+    # ACLOCAL_PATH is a special case: we include the aclocal paths from both
+    # target and native, so that it is possible to get the pkg-config macros.
+    ACLOCAL_PATH="$NATIVE_INSTALL_DIR/share/aclocal:${ACLOCAL_PATH:-}"
+    if [ "$PACKAGE_TYPE" = "target" ]; then
+        ACLOCAL_PATH="$INSTALL_DIR/share/aclocal:${ACLOCAL_PATH:-}"
+    fi
+    export ACLOCAL_PATH
+
+    # Same with PATH as for ACLOCAL_PATH. We can always run tools from
+    # install.native, but only from target install if we're building for it.
+    PATH="$NATIVE_INSTALL_DIR/bin:$PATH"
+    if [ "$PACKAGE_TYPE" = "target" ]; then
+        PATH="$INSTALL_DIR/bin:$PATH"
+    fi
+
+    # We need to find where to look for pkg-config .pc files:
+    PKG_CONFIG_PATH="$PACKAGE_INSTALL_DIR/lib/pkgconfig:${PKG_CONFIG_PATH:-}"
+    export PKG_CONFIG_PATH
+
+    # When cross-compiling, reconfigure pkg-config to not look for .pc
+    # files in the standard system directories; only in our own build
+    # directory. It may be that a library is installed on the system
+    # but that is useless if it is for the wrong architecture.
+    if $IS_CROSS_COMPILE && [ "$PACKAGE_TYPE" = "target" ]; then
+        export PKG_CONFIG_LIBDIR=
+    fi
+}
+
+install_dependencies() {
+    local i
+    for i in "${!DEPENDENCIES[@]}"; do
+        local dep="${DEPENDENCIES[$i]}"
+        chocpkg install "$dep"
+    done
+}
+
+cmd_installed() {
+    setup_build_environment
+    check_installed
+}
+
+cmd_fetch() {
+    do_fetch
+}
+
+# Function invoked before a package is built to set up the build environment,
+# if necessary. Can be overridden by pkgdef files.
+prebuild_setup() {
+    true
+}
+
+cmd_build() {
+    install_dependencies
+    chocpkg fetch "$PACKAGE_NAME"
+
+    echo =======================================================
+    echo "Building $PACKAGE_NAME..."
+    echo =======================================================
+    echo
+    cd "$PACKAGE_BUILD_DIR"
+
+    setup_build_environment
+
+    if ! prebuild_setup; then
+        error_exit "Failed pre-build setup step for $PACKAGE_NAME."
+    fi
+
+    do_build
+}
+
+cmd_reinstall() {
+    chocpkg build "$PACKAGE_NAME"
+    cd "$PACKAGE_BUILD_DIR"
+    do_install
+}
+
+cmd_shell() {
+    setup_build_environment
+    exec $SHELL
+}
+
+cmd_install() {
+    # Already installed? Don't install again.
+    if ! chocpkg installed "$PACKAGE_NAME"; then
+        chocpkg reinstall "$PACKAGE_NAME"
+    fi
+}
+
+cmd_packages() {
+    for sh_file in $CHOCPKG_ROOT/pkgdef/*.sh; do
+        basename "${sh_file/%.sh/}"
+    done
+}
+
+package_info() {
+    printf "package: %s\n" "$PACKAGE_NAME"
+    printf "description: %s\n" "$PACKAGE_DESCRIPTION"
+
+    printf "installed: "
+    if chocpkg installed "$PACKAGE_NAME"; then
+        printf "true\n"
+    else
+        printf "false\n"
+    fi
+    local deps=$(chocpkg dependencies "$PACKAGE_NAME")
+
+    printf "dependencies:"
+    for dep in $(chocpkg dependencies "$PACKAGE_NAME"); do
+        printf " %s" "$dep"
+    done
+    printf "\n"
+
+    printf "variants:"
+    local i
+    for i in "${!ALL_VARIANTS[@]}"; do
+        printf "%s\n" "${ALL_VARIANTS[$i]}"
+    done | sort | uniq | while read v; do
+        printf " %s" "$v"
+    done
+    printf "\n"
+}
+
+cmd_info() {
+    # If a specific package name is not provided, list info on
+    # all packages.
+    if [ $# -lt 2 ]; then
+        for package in $(chocpkg packages); do
+            chocpkg info "$package"
+            echo
+        done
+    else
+        configure_for_package "$2"
+        echo "$(package_info)"
+    fi
+}
+
+cmd_dependencies() {
+    local i
+    for i in "${!DEPENDENCIES[@]}"; do
+        local dep="${DEPENDENCIES[$i]}"
+        echo "$dep"
+        chocpkg dependencies "$dep"
+    done | sort | uniq
+}
+
+usage() {
+    cat <<END
+Usage:
+    $0 packages
+        - List the names of all known packages.
+
+    $0 info [package]
+        - Display a description of the specified package, or all packages.
+
+    $0 install <package>
+        - Build and install the specified package, if not already installed.
+
+    $0 reinstall <package>
+        - Rebuild and reinstall the specified package, even if installed.
+
+    $0 build <package>
+        - Fetch and build the specified package, but do not install it.
+
+    $0 fetch <package>
+        - Download the specified package but do not build it.
+
+END
+}
+
+# "Package" commands operate on a specific package named on the command line.
+package_command() {
+    local cmd="$1"
+
+    if [ $# -lt 2 ]; then
+        usage
+        exit 1
+    fi
+
+    local package="$2"
+    configure_for_package "$package"
+
+    case "$cmd" in
+        fetch)
+            cmd_fetch
+            ;;
+        build)
+            cmd_build
+            ;;
+        reinstall)
+            cmd_reinstall
+            ;;
+        install)
+            cmd_install
+            ;;
+        dependencies)
+            cmd_dependencies
+            ;;
+        installed)
+            cmd_installed
+            ;;
+        shell)
+            cmd_shell
+            ;;
+    esac
+}
+
+case "${1:-NONE}" in
+    packages)
+        cmd_packages
+        ;;
+    info)
+        cmd_info "$@"
+        ;;
+    fetch|build|reinstall|install|dependencies|installed|shell)
+        package_command "$@"
+        ;;
+    *)
+        usage
+        exit 1
+        ;;
+esac
+
