@@ -5,79 +5,151 @@ types:
   World: !include ./world.raml
   Door: !include ./door.raml
   MapObject: !include ./map_object.raml
+  SpawnMapObject: !include ./map_object_spawn.raml
   PlayerAction: !include ./player_action.raml
   Player: !include ./player.raml
 
 baseUri: http://localhost:6666
 
 /api/player:
+  description: Player endpoints
   get:
+    description: Query the player
     responses:
       200:
         body:
           application/json:
             type: Player
   patch:
+    description: Update the player
     body:
       application/json:
         type: Player
+        example: |
+          {
+            "weapon": 3
+          }
     responses:
       200:
         body:
           application/json:
             type: Player
+            example: | 
+              {
+              }
+
   /actions:
     post:
+      description: Create an action for the player to perform
       body:
         application/json:
           type: PlayerAction
+          example: |
+            {
+              "type": "shoot"
+            }
       responses:
         201:
 
-
-
 /api/world:
+  description: World endpoints
   get:
+    description: Query the current world state
     responses:
       200:
         body:
           application/json:
             type: World
+            example: | 
+              {
+                "episode": 1,
+                "map": 2
+              }
   patch:
+    description: Update the current world state
     body: 
       application/json:
         type: World
+        example: | 
+              {
+                "map": 3
+              }
     responses:
       200:
         body:
           application/json:
             type: World
+            example: | 
+              {
+                "episode": 1,
+                "map": 3
+              }
 
   /doors:
-    description: Doors resource
+    description: World doors endpoints
     get:
+      description: Query door items
       responses:
         200:
           body:
             application/json:
               type: Door[]
+              example: |
+                [
+                  {
+                    "id": 140,
+                    "state": "closed",
+                    "keyRequired": "none"
+                  }
+                ]
     /{id}:
-      description: A single door
+      description: Query the specified door
       uriParameters: 
         id: 
           description: "door id"
-      patch:
-        body: 
-          application/json:
-            type: Door
+      get:
+        description: Query the specified door
         responses:
           200:
             body:
               application/json:
                 type: Door
+                example: |
+                  {
+                    "id": 140,
+                    "state": "closed",
+                    "keyRequired": "none"
+                  }
+          404:
+            description: The specified door does not exist
+
+      patch:
+        description: Update the specified door
+        body: 
+          application/json:
+            type: Door
+            example: |
+              {
+                "state": "open"
+              }
+        responses:
+          200:
+            body:
+              application/json:
+                type: Door
+                example: |
+                  {
+                    "id": 140,
+                    "state": "open",
+                    "keyRequired": "none"
+                  }
+          404:
+            description: The specified door does not exist
+
   /objects:
-    description: "Map Object resources"
+    description: World objects endpoints
     get:
+      description: Query map object items
       queryParameters:
         distance:
           description: |
@@ -88,28 +160,61 @@ baseUri: http://localhost:6666
             application/json:
               type: MapObject[]
     post:
+      description: Spawn a new map object
       body:
         application/json:
-          type: MapObject
+          type: SpawnMapObject
+          example: |
+            {
+              "type": "IMP",
+              "distance": 250
+            }
       responses:
         200:
           body:
             application/json:
               type: MapObject
+              example: !include map_object_example.raml
+        400:
+          description: The specified object type is invalid
     /{id}:
       get:
+        description: Query the specified map object
         responses:
           200:
             body:
               application/json:
                 type: MapObject
+                example: !include map_object_example.raml
+          404:
+            description: The specified object does not exist
       patch:
+        description: Update the specifed map object
+        body:
+          application/json:
+            type: MapObject
+            example: |
+              {
+                "health": 20,
+                "position": {
+                  "z": 190
+                },
+                "flags": {
+                  "MF_SHADOW": true
+                }
+              }
         responses:
           200:
             body:
               application/json:
                 type: MapObject
+                example: !include map_object_example.raml
+          404:
+            description: The specified object does not exist
       delete:
-        description: "Delete this object"
+        description: Delete the specified map object
         responses:
           204:
+            description: The specified object was deleted
+          404:
+            description: The specified object does not exist

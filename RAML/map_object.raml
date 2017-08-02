@@ -1,26 +1,36 @@
 #%RAML 1.0 DataType
 
-displayName: GameObject
+displayName: MapObject
 properties:
   id:
     type: integer
     required: false
-    description: "Identifier of the object"
+    description: Identifier of this object
     example: 1
   position:
-    type: !include "./position.raml"
+    required: false
+    type: !include ./position.raml
+    description: Location of this item in world units
   angle:
+    required: false
     type: integer
+    description: Angle this object is pointing
   health:
+    required: false
     type: integer
+    description: Health remaining
   type:
+    required: false
     type: string
-    description: "Type of object"
+    description: Type of this object
   distance:
+    required: false
     type: integer
-    description: "Distance from player"
+    description: Distance from player
   attacking:
+    required: false
     type: integer
-    description: "ID of the object this object is attacking"
+    description: ID of the object this object is attacking
   flags:
-    type: !include "./map_object_flags.raml" 
+    required: false
+    type: !include ./map_object_flags.raml

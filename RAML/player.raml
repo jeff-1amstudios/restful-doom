@@ -4,20 +4,27 @@ type: !include ./map_object.raml
 properties:
   armor:
     type: integer
+    required: false
     description: amount of armor remaining
   kills:
     type: integer
+    required: false
     description: kill count
   items:
     type: integer
+    required: false
     description: number of items picked up
   secrets:
     type: integer
+    required: false
     description: number of secret areas found
   weapon:
     type: integer
+    required: false
     description: 0=hands, 1=pistol etc
   keyCards:
+    required: false
     type: !include ./key_cards.raml
   cheatFlags:
+    required: false
     type: !include ./cheat_flags.raml  

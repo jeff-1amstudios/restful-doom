@@ -4,21 +4,28 @@ displayName: 'Map Object flags'
 properties:
   MF_SPECIAL:
     type: boolean
-    description: This item triggers a special thinker
+    required: false
+    description: When this item is picked up, call P_SpecialThing
   MF_SOLID:
     type: boolean
+    required: false
     description: Cannot be walked through
   MF_SHOOTABLE:
     type: boolean
+    required: false
     description: Takes damage when shot
   MF_NOGRAVITY:
     type: boolean
+    required: false
     description: Don't apply regular world gravity
   MF_NOCLIP:
     type: boolean
+    required: false
   MF_SHADOW:
     type: boolean
+    required: false
     description: Render this item with the flickering half-invisible shadow rendering
   MF_CORPSE:
     type: boolean
+    required: false
     description: Don't respond to any action

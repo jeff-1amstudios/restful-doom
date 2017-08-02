@@ -5,18 +5,14 @@ properties:
   id:
     type: integer
     required: false
-    description: |
-      Identifier of the door
-    example: 1
+    description: Identifier of the door
   state:
     type: string
     required: false
-    description: |
-      "open" or "closed"
-    example: "open"
+    description: Current state of the door
+    example: open / closed
   keyRequired:
     type: string
     required: false
-    description: |
-      "none" or "red", "blue", "yellow" depending on which key the door requires
-    example: "red"
+    description: The key required to open this door
+    example: red / blue / yellow / none
