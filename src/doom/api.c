@@ -12,6 +12,8 @@
 #include "api_player_controller.h"
 #include "api_world_controller.h"
 #include "api_door_controller.h"
+#include "api_object_controller.h"
+
 
 extern api_obj_description_t api_descriptors[];
 char path[100];
@@ -196,7 +198,7 @@ api_response_t API_RouteRequest(api_request_t req)
     {
         if (strcmp(method, "POST") == 0) 
         {
-            return API_PostWorldObjects(json);
+            return API_PostObject(json);
         }
         else if (strcmp(method, "GET") == 0)
         {
@@ -208,7 +210,7 @@ api_response_t API_RouteRequest(api_request_t req)
                     distance = atoi(params[p].val);
                 }
             }
-            return API_GetWorldObjects(distance);
+            return API_GetObjects(distance);
         }
         return API_CreateErrorResponse(405, "Method not allowed");
     }
@@ -219,15 +221,15 @@ api_response_t API_RouteRequest(api_request_t req)
         }
         if (strcmp(method, "DELETE") == 0)
         {
-            return API_DeleteWorldObject(id);
+            return API_DeleteObject(id);
         }
         else if (strcmp(method, "GET") == 0)
         {
-            return API_GetWorldObject(id);
+            return API_GetObject(id);
         }
         else if (strcmp(method, "PATCH") == 0)
         {
-            return API_PatchWorldObject(id, json);
+            return API_PatchObject(id, json);
         }
         return API_CreateErrorResponse(405, "Method not allowed");
     }

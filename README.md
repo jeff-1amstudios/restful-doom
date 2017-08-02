@@ -23,16 +23,16 @@ http://1amstudios.com/2017/08/01/restful-doom/
 
 ## Build
 
-### Building dependencies (needs to be run once)
+### Building dependencies (needs to be run only once)
 
 Takes care of building and configuring dependencies like SDL. Uses [chocpkg](https://github.com/chocolate-doom/chocpkg).
 ```
-./install-deps.sh
+./configure-and-build.sh
 ```
 
 ### Compiling
 
-Run `make` from the src (or root) directory. `src/restful-doom` will be created if the compile succeeds..
+Run `make` from the src (or root) directory. `src/restful-doom` will be created if the compile succeeds.
 
 ## Run
 

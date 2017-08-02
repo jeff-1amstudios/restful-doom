@@ -55,6 +55,8 @@ cJSON* DescribeDoor(int id, line_t *line)
     return door;
 }
 
+// Controller methods
+
 api_response_t API_GetDoors(int max_distance)
 {
     mobj_t * player = players[CONSOLE_PLAYER].mo;
