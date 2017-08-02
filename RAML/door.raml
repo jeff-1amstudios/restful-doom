@@ -1,0 +1,22 @@
+#%RAML 1.0 DataType
+
+displayName: Door
+properties:
+  id:
+    type: integer
+    required: false
+    description: |
+      Identifier of the door
+    example: 1
+  state:
+    type: string
+    required: false
+    description: |
+      "open" or "closed"
+    example: "open"
+  keyRequired:
+    type: string
+    required: false
+    description: |
+      "none" or "red", "blue", "yellow" depending on which key the door requires
+    example: "red"

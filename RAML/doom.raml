@@ -1,0 +1,115 @@
+#%RAML 1.0
+title: RESTful-DOOM
+
+types:
+  World: !include ./world.raml
+  Door: !include ./door.raml
+  MapObject: !include ./map_object.raml
+  PlayerAction: !include ./player_action.raml
+  Player: !include ./player.raml
+
+baseUri: http://localhost:6666
+
+/api/player:
+  get:
+    responses:
+      200:
+        body:
+          application/json:
+            type: Player
+  patch:
+    body:
+      application/json:
+        type: Player
+    responses:
+      200:
+        body:
+          application/json:
+            type: Player
+  /actions:
+    post:
+      body:
+        application/json:
+          type: PlayerAction
+      responses:
+        201:
+
+
+
+/api/world:
+  get:
+    responses:
+      200:
+        body:
+          application/json:
+            type: World
+  patch:
+    body: 
+      application/json:
+        type: World
+    responses:
+      200:
+        body:
+          application/json:
+            type: World
+
+  /doors:
+    description: Doors resource
+    get:
+      responses:
+        200:
+          body:
+            application/json:
+              type: Door[]
+    /{id}:
+      description: A single door
+      uriParameters: 
+        id: 
+          description: "door id"
+      patch:
+        body: 
+          application/json:
+            type: Door
+        responses:
+          200:
+            body:
+              application/json:
+                type: Door
+  /objects:
+    description: "Map Object resources"
+    get:
+      queryParameters:
+        distance:
+          description: |
+            Only return items up to this distance from player
+      responses:
+        200:
+          body:
+            application/json:
+              type: MapObject[]
+    post:
+      body:
+        application/json:
+          type: MapObject
+      responses:
+        200:
+          body:
+            application/json:
+              type: MapObject
+    /{id}:
+      get:
+        responses:
+          200:
+            body:
+              application/json:
+                type: MapObject
+      patch:
+        responses:
+          200:
+            body:
+              application/json:
+                type: MapObject
+      delete:
+        description: "Delete this object"
+        responses:
+          204:

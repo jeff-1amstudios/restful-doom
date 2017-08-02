@@ -19,6 +19,8 @@ http://1amstudios.com/2017/08/01/restful-doom/
 
 ## API Spec
 
+[API spec in RAML 1.0 format](https://github.com/jeff-1amstudios/restful-doom/blob/master/RAML/doom.raml)
+
 ## Build
 
 ### Building dependencies (needs to be run once)

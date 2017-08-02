@@ -1,0 +1,23 @@
+#%RAML 1.0 DataType
+
+type: !include ./map_object.raml
+properties:
+  armor:
+    type: integer
+    description: amount of armor remaining
+  kills:
+    type: integer
+    description: kill count
+  items:
+    type: integer
+    description: number of items picked up
+  secrets:
+    type: integer
+    description: number of secret areas found
+  weapon:
+    type: integer
+    description: 0=hands, 1=pistol etc
+  keyCards:
+    type: !include ./key_cards.raml
+  cheatFlags:
+    type: !include ./cheat_flags.raml  
