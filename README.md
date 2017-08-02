@@ -12,12 +12,14 @@ Build an HTTP+JSON RESTful API server in C.
 - Run the server code inside the Doom engine, without breaking the game loop.
 - Figure out what kinds of things we can manipulate in the game world, and how to interact with them in memory to achieve the desired effect!
 
-## Base DOOM source port
-RESTFul-DOOM is built on top of the awesome [chocolate-doom](https://github.com/chocolate-doom/chocolate-doom) project. I like this project because it aims to stick as close to the original experience as possible, while making it easy to compile and run on modern systems.
+RESTFul-DOOM is built on top of the awesome [Chocolate Doom](https://github.com/chocolate-doom/chocolate-doom) project. I like this project because it aims to stick as close to the original experience as possible, while making it easy to compile and run on modern systems. This was only possible by building on top of their hard work!
+
+### More details in blog post:
+http://1amstudios.com/2017/08/01/restful-doom/
 
 ## API Spec
 
-## Building
+## Build
 
 ### Building dependencies (needs to be run once)
 
@@ -30,7 +32,7 @@ Takes care of building and configuring dependencies like SDL. Uses [chocpkg](htt
 
 Run `make` from the src (or root) directory. `src/restful-doom` will be created if the compile succeeds..
 
-## Running
+## Run
 
 The DOOM engine is open source, but assets (art, maps etc) are not. You'll need to download an appropriate [WAD file](https://en.wikipedia.org/wiki/Doom_WAD) separately.
 
@@ -39,7 +41,7 @@ To run restful-doom on port 6666:
 src/restful-doom -iwad <path/to/doom1.wad> -apiport 6666 ...
 ```
 
-## Thanks to
+## Thanks!
 [chocolate-doom](https://github.com/chocolate-doom/chocolate-doom) team  
 [cJSON](https://github.com/DaveGamble/cJSON) - JSON parsing / generation  
 [yuarel](https://github.com/jacketizer/libyuarel/) - URL parsing  
