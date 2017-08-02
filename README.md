@@ -8,7 +8,7 @@ RESTful-DOOM is a version of Doom which hosts a RESTful API! The API allows you 
 
 There were a few challenges:
 
-Build an HTTP+JSON RESTful API server in C.
+- Build an HTTP+JSON RESTful API server in C.
 - Run the server code inside the Doom engine, without breaking the game loop.
 - Figure out what kinds of things we can manipulate in the game world, and how to interact with them in memory to achieve the desired effect!
 
