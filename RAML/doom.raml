@@ -20,6 +20,33 @@ baseUri: http://localhost:6666
         body:
           application/json:
             type: Player
+            example: | 
+              {
+                "id": 0,
+                "position": {
+                  "x": -32,
+                  "y": -240,
+                  "z": 24
+                },
+                "angle": 90,
+                "health": 100,
+                "type": "Player",
+                "flags": {
+                  "MF_SOLID": true,
+                  "MF_SHOOTABLE": true
+                },
+                "armor": 0,
+                "kills": 0,
+                "items": 0,
+                "secrets": 0,
+                "weapon": 1,
+                "keyCards": {
+                  "blue": false,
+                  "red": false,
+                  "yellow": false
+                },
+                "cheatFlags": {}
+              }
   patch:
     description: Update the player
     body:
@@ -36,6 +63,34 @@ baseUri: http://localhost:6666
             type: Player
             example: | 
               {
+                "id": 0,
+                "position": {
+                  "x": -32,
+                  "y": -240,
+                  "z": 24
+                },
+                "angle": 90,
+                "height": 56,
+                "health": 100,
+                "type": "Player",
+                "flags": {
+                  "MF_SOLID": true,
+                  "MF_SHOOTABLE": true,
+                  "MF_DROPOFF": true,
+                  "MF_PICKUP": true,
+                  "MF_NOTDMATCH": true
+                },
+                "armor": 0,
+                "kills": 0,
+                "items": 0,
+                "secrets": 0,
+                "weapon": 1,
+                "keyCards": {
+                  "blue": false,
+                  "red": false,
+                  "yellow": false
+                },
+                "cheatFlags": {}
               }
 
   /actions:
