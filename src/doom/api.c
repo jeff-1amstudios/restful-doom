@@ -148,6 +148,11 @@ api_response_t API_RouteRequest(api_request_t req)
     char *path = req.url.path;
     cJSON *json = cJSON_Parse(req.body);
     
+    if (strlen(req.body) > 0 && json == NULL)
+    {
+        return API_CreateErrorResponse(400, "Request body was not valid json.");
+    }
+
     if (strcmp(path, "api/message") == 0)
     {
         if (strcmp(method, "POST") == 0)
