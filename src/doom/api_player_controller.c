@@ -62,6 +62,15 @@ api_response_t API_PostPlayerAction(cJSON *req)
     {
         P_FireWeapon(&players[CONSOLE_PLAYER]);
     }
+    else if (strcmp(type, "open") == 0)
+    {
+        keys_down[KEYP_SPACE] = 44;
+        event_t event;
+        event.type = ev_keydown;
+        event.data1 = KEYP_SPACE;
+        event.data2 = 0;
+        D_PostEvent(&event);
+    }
     else {
         return API_CreateErrorResponse(400, "invalid action type");
     }

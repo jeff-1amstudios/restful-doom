@@ -88,6 +88,7 @@
 #define KEYP_PERIOD     0
 #define KEYP_EQUALS     KEY_EQUALS
 #define KEYP_ENTER      KEY_ENTER
+#define KEYP_SPACE      ' '
 
 #define SCANCODE_TO_KEYS_ARRAY {                                            \
     0,   0,   0,   0,   'a',                                  /* 0-9 */     \
