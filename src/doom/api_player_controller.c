@@ -15,6 +15,11 @@ extern player_t players[MAXPLAYERS];
 extern void P_FireWeapon (player_t* player);
 extern void P_KillMobj( mobj_t* source, mobj_t* target );
 
+extern int key_right;
+extern int key_left;
+extern int key_up;
+extern int key_down;
+
 api_response_t API_PostMessage(cJSON *req)
 {
     API_SetHUDMessage(cJSON_GetObjectItem(req, "text")->valuestring);
@@ -26,37 +31,40 @@ api_response_t API_PostPlayerAction(cJSON *req)
     char *type = cJSON_GetObjectItem(req, "type")->valuestring;
     if (strcmp(type, "forward") == 0)
     {
-        keys_down[KEY_UPARROW] = 20;
+        keys_down[key_up] = 20;
         event_t event;
         event.type = ev_keydown;
-        event.data1 = KEY_UPARROW;
+        event.data1 = key_up;
         event.data2 = 0;
         D_PostEvent(&event);
     }
     else if (strcmp(type, "backward") == 0)
     {
-        keys_down[KEY_DOWNARROW] = 20;
+        keys_down[key_down] = 20;
         event_t event;
         event.type = ev_keydown;
-        event.data1 = KEY_DOWNARROW;
+        event.data1 = key_down;
         event.data2 = 0;
         D_PostEvent(&event);
     }
     else if (strcmp(type, "turn-left") == 0) {
-        keys_down[KEY_LEFTARROW] = 10;
+        keys_down[key_left] = 10;
         event_t event;
         event.type = ev_keydown;
-        event.data1 = KEY_LEFTARROW;
+        event.data1 = key_left;
         event.data2 = 0;
         D_PostEvent(&event);
     }
     else if (strcmp(type, "turn-right") == 0) {
-        keys_down[KEY_RIGHTARROW] = 10;
+        keys_down[key_right] = 10;
         event_t event;
         event.type = ev_keydown;
-        event.data1 = KEY_RIGHTARROW;
+        event.data1 = key_right;
         event.data2 = 0;
         D_PostEvent(&event);
+    }
+    else if (strcmp(type, "use") == 0) {
+        P_UseLines(&players[CONSOLE_PLAYER]);
     }
     else if (strcmp(type, "shoot") == 0)
     {
