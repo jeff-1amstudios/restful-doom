@@ -112,10 +112,16 @@ api_response_t API_PatchPlayer(cJSON *req)
         player->pendingweapon = weapon;
     }
     val = cJSON_GetObjectItem(req, "armor");
+    if (val) player->armorpoints = val->valueint;
+
+    val = cJSON_GetObjectItem(req, "health");
     if (val)
     {
-        player->armorpoints = val->valueint;
+        // we have to set both of these at the same time
+        player->health = val->valueint;
+        player->mo->health = val->valueint;
     }
+
     cJSON *flags = cJSON_GetObjectItem(req, "cheatFlags");
     if (flags)
     {
