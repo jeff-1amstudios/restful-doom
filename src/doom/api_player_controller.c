@@ -19,6 +19,8 @@ extern int key_right;
 extern int key_left;
 extern int key_up;
 extern int key_down;
+extern int key_strafeleft;
+extern int key_straferight;
 extern int consoleplayer;
 
 api_response_t API_PostMessage(cJSON *req)
@@ -61,6 +63,22 @@ api_response_t API_PostPlayerAction(cJSON *req)
         event_t event;
         event.type = ev_keydown;
         event.data1 = key_right;
+        event.data2 = 0;
+        D_PostEvent(&event);
+    }
+    else if (strcmp(type, "strafe-left") == 0) {
+        keys_down[key_strafeleft] = 10;
+        event_t event;
+        event.type = ev_keydown;
+        event.data1 = key_strafeleft;
+        event.data2 = 0;
+        D_PostEvent(&event);
+    }
+    else if (strcmp(type, "strafe-right") == 0) {
+        keys_down[key_straferight] = 10;
+        event_t event;
+        event.type = ev_keydown;
+        event.data1 = key_straferight;
         event.data2 = 0;
         D_PostEvent(&event);
     }
