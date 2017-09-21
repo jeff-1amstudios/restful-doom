@@ -4,20 +4,19 @@
 #include "v_video.h"
 #include <unistd.h>
 
-#define CONSOLE_PLAYER 0
-
 // externally-defined game variables
 extern  skill_t         gameskill;
 extern int              gameepisode;
 extern int              gamemap;
 extern player_t         players[MAXPLAYERS];
+extern int consoleplayer;
 
 cJSON *DescribeWorldState() {
   cJSON *root = cJSON_CreateObject();
   cJSON_AddNumberToObject(root, "episode", gameepisode);
   cJSON_AddNumberToObject(root, "map", gamemap);
 
-  sector_t *sector = players[CONSOLE_PLAYER].mo->subsector->sector;
+  sector_t *sector = players[consoleplayer].mo->subsector->sector;
   cJSON_AddStringToObject(root, "lights", sector->lightlevel == 75 ? "off" : "on");
   return root;
 }
@@ -48,11 +47,11 @@ api_response_t API_PatchWorld(cJSON *req) {
   val = cJSON_GetObjectItem(req, "lights");
   if (val) {
     if (strcmp(val->valuestring, "on") == 0) {
-        struct line_s *line = players[CONSOLE_PLAYER].mo->subsector->sector->lines[0];
+        struct line_s *line = players[consoleplayer].mo->subsector->sector->lines[0];
         EV_LightTurnOn(line, 255);
     }
     else {
-        struct line_s *line = players[CONSOLE_PLAYER].mo->subsector->sector->lines[0];
+        struct line_s *line = players[consoleplayer].mo->subsector->sector->lines[0];
         EV_LightTurnOn(line, 75);
     }
   }

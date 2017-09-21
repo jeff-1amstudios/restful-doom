@@ -30,6 +30,7 @@ void API_SendResponse(api_response_t resp);
 
 // externally-defined game variables
 extern player_t players[MAXPLAYERS];
+extern int consoleplayer;
 
 void API_Init(int port)
 {
@@ -388,7 +389,7 @@ cJSON* DescribeMObj(mobj_t *obj)
 void API_SetHUDMessage(char *msg)
 {
     strncpy(hud_message, msg, 512);
-    players[CONSOLE_PLAYER].message = hud_message;
+    players[consoleplayer].message = hud_message;
 }
 
 void API_FlipFlag(int *flags, int mask, boolean on) {
