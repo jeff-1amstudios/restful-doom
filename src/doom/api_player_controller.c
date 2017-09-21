@@ -77,9 +77,9 @@ api_response_t API_PostPlayerAction(cJSON *req)
     return (api_response_t) {201, NULL};
 }
 
-api_response_t API_GetPlayer()
+cJSON* getPlayer(int playernum)
 {
-    player_t *player = &players[consoleplayer];
+    player_t *player = &players[playernum];
     cJSON *root = DescribeMObj(player->mo);
     cJSON_AddNumberToObject(root, "armor", player->armorpoints);
     cJSON_AddNumberToObject(root, "kills", player->killcount);
@@ -97,6 +97,27 @@ api_response_t API_GetPlayer()
     if (player->cheats & CF_NOCLIP) cJSON_AddTrueToObject(cheats, "CF_NOCLIP");
     if (player->cheats & CF_GODMODE) cJSON_AddTrueToObject(cheats, "CF_GODMODE");
     cJSON_AddItemToObject(root, "cheatFlags", cheats);
+    return root;
+}
+
+api_response_t API_GetPlayer()
+{
+    cJSON *root = getPlayer(consoleplayer);
+    return (api_response_t) {200, root};
+}
+
+api_response_t API_GetPlayers()
+{
+    cJSON *root = cJSON_CreateArray();
+    for (int i = 0; i < MAXPLAYERS; i++)
+    {
+        if ((&players[i])->mo != 0x0)
+        {
+            cJSON *player = getPlayer(i);
+            cJSON_AddBoolToObject(player, "isConsolePlayer", i == consoleplayer);
+            cJSON_AddItemToArray(root, player);
+        }
+    }
     return (api_response_t) {200, root};
 }
 

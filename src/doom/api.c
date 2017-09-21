@@ -180,6 +180,14 @@ api_response_t API_RouteRequest(api_request_t req)
         }
         return API_CreateErrorResponse(405, "Method not allowed");
     }
+    else if (strcmp(path, "api/players") == 0)
+    {
+        if (strcmp(method, "GET") == 0)
+        {
+            return API_GetPlayers();
+        }
+        return API_CreateErrorResponse(405, "Method not allowed");
+    }
     else if (strcmp(path, "api/world") == 0) {
         if (strcmp(method, "GET") == 0) {
             return API_GetWorld();
