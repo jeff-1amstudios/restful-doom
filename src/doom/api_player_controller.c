@@ -19,6 +19,7 @@ extern int key_right;
 extern int key_left;
 extern int key_up;
 extern int key_down;
+extern int consoleplayer;
 
 api_response_t API_PostMessage(cJSON *req)
 {
@@ -64,11 +65,11 @@ api_response_t API_PostPlayerAction(cJSON *req)
         D_PostEvent(&event);
     }
     else if (strcmp(type, "use") == 0) {
-        P_UseLines(&players[CONSOLE_PLAYER]);
+        P_UseLines(&players[consoleplayer]);
     }
     else if (strcmp(type, "shoot") == 0)
     {
-        P_FireWeapon(&players[CONSOLE_PLAYER]);
+        P_FireWeapon(&players[consoleplayer]);
     }
     else {
         return API_CreateErrorResponse(400, "invalid action type");
@@ -78,7 +79,7 @@ api_response_t API_PostPlayerAction(cJSON *req)
 
 api_response_t API_GetPlayer()
 {
-    player_t *player = &players[CONSOLE_PLAYER];
+    player_t *player = &players[consoleplayer];
     cJSON *root = DescribeMObj(player->mo);
     cJSON_AddNumberToObject(root, "armor", player->armorpoints);
     cJSON_AddNumberToObject(root, "kills", player->killcount);
@@ -101,7 +102,7 @@ api_response_t API_GetPlayer()
 
 api_response_t API_PatchPlayer(cJSON *req)
 {
-    player_t *player = &players[CONSOLE_PLAYER];
+    player_t *player = &players[consoleplayer];
     cJSON *val = cJSON_GetObjectItem(req, "weapon");
     if (val)
     {
@@ -135,7 +136,7 @@ api_response_t API_PatchPlayer(cJSON *req)
 }
 
 api_response_t API_DeletePlayer() {
-  player_t *player = &players[CONSOLE_PLAYER];  
+  player_t *player = &players[consoleplayer];  
   P_KillMobj(NULL, player->mo);
   return API_GetPlayer();
 }

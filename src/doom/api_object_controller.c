@@ -3,9 +3,8 @@
 #include "d_player.h"
 #include "p_local.h"
 
-#define CONSOLE_PLAYER 0
-
 extern api_obj_description_t api_descriptors[];
+extern int consoleplayer;
 
 // externally-defined game variables
 extern player_t         players[MAXPLAYERS];
@@ -53,7 +52,7 @@ mobj_t *FindObjectById(long id)
 
 api_response_t API_PostObject(cJSON *req)
 {
-    mobj_t *pobj = players[CONSOLE_PLAYER].mo;
+    mobj_t *pobj = players[consoleplayer].mo;
     fixed_t angle = pobj->angle >> ANGLETOFINESHIFT;
     fixed_t x, y, z;
 
@@ -100,7 +99,7 @@ api_response_t API_GetObjects(int max_distance)
 {
     cJSON *root = cJSON_CreateArray();
     mobj_t *t;
-    mobj_t * player = players[CONSOLE_PLAYER].mo;
+    mobj_t * player = players[consoleplayer].mo;
     for (int i = 0; i < numsectors; i++) {
         t = sectors[i].thinglist;
         while (t)
