@@ -131,6 +131,7 @@ char		mapdir[1024];           // directory of development maps
 
 int             show_endoom = 1;
 
+extern pthread_mutex_t event_lock;  // for controlling access to post events
 
 void D_ConnectNetGame(void);
 void D_CheckNetGame(void);
@@ -429,7 +430,7 @@ void D_DoomLoop (void)
 	G_BeginRecording ();
 
     main_loop_started = true;
-
+    pthread_mutex_init(&event_lock, NULL);
     TryRunTics();
 
     I_SetWindowTitle(gamedescription);

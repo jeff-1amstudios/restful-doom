@@ -18,7 +18,7 @@
 extern api_obj_description_t api_descriptors[];
 char path[100];
 char hud_message[512];
-pthread_mutex_t lock;
+pthread_mutex_t api_lock;
 
 TCPsocket server_sd;
 TCPsocket client_sd;
@@ -36,7 +36,7 @@ extern int consoleplayer;
 void API_Init(int port)
 {
     // mutex for ensuring only a single API thread is running
-    pthread_mutex_init(&lock, NULL);
+    pthread_mutex_init(&api_lock, NULL);
 
     IPaddress ip;
     if (SDLNet_Init() < 0)
@@ -113,13 +113,14 @@ void API_RunIO_main()
     }
 
     API_AfterTic();
-    pthread_mutex_unlock(&lock);  // we're done so unlock the mutex and allow another API loop to start
+    pthread_mutex_unlock(&api_lock);  // we're done so unlock the mutex and allow another API loop to start
 }
 
 void API_RunIO()
 {
     // The main api loop takes a long time to run, so do it asynchronously
-    if (pthread_mutex_trylock(&lock) == 0 )
+    // If api is still being serviced, skip and try again next time
+    if (pthread_mutex_trylock(&api_lock) == 0 )
     {
         pthread_t tid;
         pthread_create(&tid, NULL, API_RunIO_main, NULL);
