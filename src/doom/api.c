@@ -18,6 +18,7 @@
 extern api_obj_description_t api_descriptors[];
 char path[100];
 char hud_message[512];
+pthread_mutex_t lock;
 
 TCPsocket server_sd;
 TCPsocket client_sd;
@@ -34,6 +35,9 @@ extern int consoleplayer;
 
 void API_Init(int port)
 {
+    // mutex for ensuring only a single API thread is running
+    pthread_mutex_init(&lock, NULL);
+
     IPaddress ip;
     if (SDLNet_Init() < 0)
     {
@@ -65,7 +69,7 @@ void API_Init(int port)
     printf("API_Init: Listening for connections on %s:%d\n", host, port);
 }
 
-void API_RunIO()
+void API_RunIO_main()
 {
     TCPsocket csd;
     int recv_len = 0;
@@ -109,6 +113,17 @@ void API_RunIO()
     }
 
     API_AfterTic();
+    pthread_mutex_unlock(&lock);  // we're done so unlock the mutex and allow another API loop to start
+}
+
+void API_RunIO()
+{
+    // The main api loop takes a long time to run, so do it asynchronously
+    if (pthread_mutex_trylock(&lock) == 0 )
+    {
+        pthread_t tid;
+        pthread_create(&tid, NULL, API_RunIO_main, NULL);
+    }
 }
 
 boolean API_ParseRequest(char *buffer, int buffer_len, api_request_t *request)
@@ -278,7 +293,7 @@ api_response_t API_RouteRequest(api_request_t req)
 
 void API_SendResponse(api_response_t resp) {
     char buffer[255];
-    sprintf(buffer, "HTTP/1.0 %d\r\nConnection: close\r\nContent-Type:application/json\r\n\r\n", resp.status_code);
+    sprintf(buffer, "HTTP/1.0 %d\r\nConnection: close\r\nAccess-Control-Allow-Origin: *\r\nContent-Type:application/json\r\n\r\n", resp.status_code);
     int len = strlen(buffer);
     if (SDLNet_TCP_Send(client_sd, (void *)buffer, len) < len) {
         printf("failed to send all bytes\n");
