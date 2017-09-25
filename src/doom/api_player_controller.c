@@ -32,9 +32,18 @@ api_response_t API_PostMessage(cJSON *req)
 api_response_t API_PostPlayerAction(cJSON *req)
 {
     char *type = cJSON_GetObjectItem(req, "type")->valuestring;
+    cJSON *amount_obj = cJSON_GetObjectItem(req, "amount");
+    int amount;
+
+    // Optional amount field, default to 10 if not set
+    if (amount_obj == NULL)
+        amount = 10;
+    else
+        amount = amount_obj->valueint;
+
     if (strcmp(type, "forward") == 0)
     {
-        keys_down[key_up] = 20;
+        keys_down[key_up] = amount;
         event_t event;
         event.type = ev_keydown;
         event.data1 = key_up;
@@ -43,7 +52,7 @@ api_response_t API_PostPlayerAction(cJSON *req)
     }
     else if (strcmp(type, "backward") == 0)
     {
-        keys_down[key_down] = 20;
+        keys_down[key_down] = amount;
         event_t event;
         event.type = ev_keydown;
         event.data1 = key_down;
@@ -51,7 +60,7 @@ api_response_t API_PostPlayerAction(cJSON *req)
         D_PostEvent(&event);
     }
     else if (strcmp(type, "turn-left") == 0) {
-        keys_down[key_left] = 10;
+        keys_down[key_left] = amount;
         event_t event;
         event.type = ev_keydown;
         event.data1 = key_left;
@@ -59,7 +68,7 @@ api_response_t API_PostPlayerAction(cJSON *req)
         D_PostEvent(&event);
     }
     else if (strcmp(type, "turn-right") == 0) {
-        keys_down[key_right] = 10;
+        keys_down[key_right] = amount;
         event_t event;
         event.type = ev_keydown;
         event.data1 = key_right;
@@ -67,7 +76,7 @@ api_response_t API_PostPlayerAction(cJSON *req)
         D_PostEvent(&event);
     }
     else if (strcmp(type, "strafe-left") == 0) {
-        keys_down[key_strafeleft] = 10;
+        keys_down[key_strafeleft] = amount;
         event_t event;
         event.type = ev_keydown;
         event.data1 = key_strafeleft;
@@ -75,7 +84,7 @@ api_response_t API_PostPlayerAction(cJSON *req)
         D_PostEvent(&event);
     }
     else if (strcmp(type, "strafe-right") == 0) {
-        keys_down[key_straferight] = 10;
+        keys_down[key_straferight] = amount;
         event_t event;
         event.type = ev_keydown;
         event.data1 = key_straferight;
