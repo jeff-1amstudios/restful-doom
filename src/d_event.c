@@ -20,6 +20,7 @@
 //
 
 #include <stdlib.h>
+#include <pthread.h>
 #include "d_event.h"
 
 #define MAXEVENTS 64

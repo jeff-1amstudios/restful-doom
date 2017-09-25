@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <SDL_net.h>
+#include <pthread.h>
 
 #include "api.h"
 #include "d_player.h"
@@ -69,7 +70,7 @@ void API_Init(int port)
     printf("API_Init: Listening for connections on %s:%d\n", host, port);
 }
 
-void API_RunIO_main()
+void *API_RunIO_main(void *arg)
 {
     TCPsocket csd;
     int recv_len = 0;
@@ -114,6 +115,8 @@ void API_RunIO_main()
 
     API_AfterTic();
     pthread_mutex_unlock(&api_lock);  // we're done so unlock the mutex and allow another API loop to start
+
+    return NULL;  // seems dumb but is required by prthead
 }
 
 void API_RunIO()
@@ -123,7 +126,7 @@ void API_RunIO()
     if (pthread_mutex_trylock(&api_lock) == 0 )
     {
         pthread_t tid;
-        pthread_create(&tid, NULL, API_RunIO_main, NULL);
+        pthread_create(&tid, NULL, &API_RunIO_main, NULL);
     }
 }
 
