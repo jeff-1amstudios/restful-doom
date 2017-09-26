@@ -30,6 +30,7 @@ void API_SendResponse(api_response_t resp);
 
 // externally-defined game variables
 extern player_t players[MAXPLAYERS];
+extern int consoleplayer;
 
 void API_Init(int port)
 {
@@ -176,6 +177,14 @@ api_response_t API_RouteRequest(api_request_t req)
         if (strcmp(method, "POST") == 0)
         {
             return API_PostPlayerAction(json);
+        }
+        return API_CreateErrorResponse(405, "Method not allowed");
+    }
+    else if (strcmp(path, "api/players") == 0)
+    {
+        if (strcmp(method, "GET") == 0)
+        {
+            return API_GetPlayers();
         }
         return API_CreateErrorResponse(405, "Method not allowed");
     }
@@ -388,7 +397,7 @@ cJSON* DescribeMObj(mobj_t *obj)
 void API_SetHUDMessage(char *msg)
 {
     strncpy(hud_message, msg, 512);
-    players[CONSOLE_PLAYER].message = hud_message;
+    players[consoleplayer].message = hud_message;
 }
 
 void API_FlipFlag(int *flags, int mask, boolean on) {

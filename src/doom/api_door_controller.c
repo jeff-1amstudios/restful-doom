@@ -8,6 +8,7 @@
 
 // externally-defined game variables
 extern player_t players[MAXPLAYERS];
+extern int consoleplayer;
 
 boolean IsLineADoor(line_t *line) 
 {
@@ -59,7 +60,7 @@ cJSON* DescribeDoor(int id, line_t *line)
 
 api_response_t API_GetDoors(int max_distance)
 {
-    mobj_t * player = players[CONSOLE_PLAYER].mo;
+    mobj_t * player = players[consoleplayer].mo;
     int sectorIds[512];
     int sectorCount = 0;
     cJSON *root = cJSON_CreateArray();
@@ -120,7 +121,7 @@ api_response_t API_PatchDoor(int id, cJSON *req)
             (strcmp(state->valuestring, "closed") == 0 && sec->floorheight != sec->ceilingheight))
         {
             //EV_DoDoor(&lines[id], vld_open);
-            EV_VerticalDoor(&lines[id], players[CONSOLE_PLAYER].mo);
+            EV_VerticalDoor(&lines[id], players[consoleplayer].mo);
         }
     }
     cJSON *door = DescribeDoor(id, &lines[id]);

@@ -8,7 +8,6 @@
 #include "p_local.h"
 #include "m_fixed.h"
 
-#define CONSOLE_PLAYER 0
 #define NUMKEYS   256
 #define NUMDESCRIPTIONS 125
 

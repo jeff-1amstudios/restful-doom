@@ -19,6 +19,9 @@ extern int key_right;
 extern int key_left;
 extern int key_up;
 extern int key_down;
+extern int key_strafeleft;
+extern int key_straferight;
+extern int consoleplayer;
 
 api_response_t API_PostMessage(cJSON *req)
 {
@@ -63,12 +66,28 @@ api_response_t API_PostPlayerAction(cJSON *req)
         event.data2 = 0;
         D_PostEvent(&event);
     }
+    else if (strcmp(type, "strafe-left") == 0) {
+        keys_down[key_strafeleft] = 10;
+        event_t event;
+        event.type = ev_keydown;
+        event.data1 = key_strafeleft;
+        event.data2 = 0;
+        D_PostEvent(&event);
+    }
+    else if (strcmp(type, "strafe-right") == 0) {
+        keys_down[key_straferight] = 10;
+        event_t event;
+        event.type = ev_keydown;
+        event.data1 = key_straferight;
+        event.data2 = 0;
+        D_PostEvent(&event);
+    }
     else if (strcmp(type, "use") == 0) {
-        P_UseLines(&players[CONSOLE_PLAYER]);
+        P_UseLines(&players[consoleplayer]);
     }
     else if (strcmp(type, "shoot") == 0)
     {
-        P_FireWeapon(&players[CONSOLE_PLAYER]);
+        P_FireWeapon(&players[consoleplayer]);
     }
     else {
         return API_CreateErrorResponse(400, "invalid action type");
@@ -76,9 +95,9 @@ api_response_t API_PostPlayerAction(cJSON *req)
     return (api_response_t) {201, NULL};
 }
 
-api_response_t API_GetPlayer()
+cJSON* getPlayer(int playernum)
 {
-    player_t *player = &players[CONSOLE_PLAYER];
+    player_t *player = &players[playernum];
     cJSON *root = DescribeMObj(player->mo);
     cJSON_AddNumberToObject(root, "armor", player->armorpoints);
     cJSON_AddNumberToObject(root, "kills", player->killcount);
@@ -96,12 +115,33 @@ api_response_t API_GetPlayer()
     if (player->cheats & CF_NOCLIP) cJSON_AddTrueToObject(cheats, "CF_NOCLIP");
     if (player->cheats & CF_GODMODE) cJSON_AddTrueToObject(cheats, "CF_GODMODE");
     cJSON_AddItemToObject(root, "cheatFlags", cheats);
+    return root;
+}
+
+api_response_t API_GetPlayer()
+{
+    cJSON *root = getPlayer(consoleplayer);
+    return (api_response_t) {200, root};
+}
+
+api_response_t API_GetPlayers()
+{
+    cJSON *root = cJSON_CreateArray();
+    for (int i = 0; i < MAXPLAYERS; i++)
+    {
+        if ((&players[i])->mo != 0x0)
+        {
+            cJSON *player = getPlayer(i);
+            cJSON_AddBoolToObject(player, "isConsolePlayer", i == consoleplayer);
+            cJSON_AddItemToArray(root, player);
+        }
+    }
     return (api_response_t) {200, root};
 }
 
 api_response_t API_PatchPlayer(cJSON *req)
 {
-    player_t *player = &players[CONSOLE_PLAYER];
+    player_t *player = &players[consoleplayer];
     cJSON *val = cJSON_GetObjectItem(req, "weapon");
     if (val)
     {
@@ -135,7 +175,7 @@ api_response_t API_PatchPlayer(cJSON *req)
 }
 
 api_response_t API_DeletePlayer() {
-  player_t *player = &players[CONSOLE_PLAYER];  
+  player_t *player = &players[consoleplayer];  
   P_KillMobj(NULL, player->mo);
   return API_GetPlayer();
 }
