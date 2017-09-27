@@ -158,7 +158,7 @@ fixed_t         forwardmove[2] = {0x19, 0x32};
 fixed_t         sidemove[2] = {0x18, 0x28}; 
 fixed_t         angleturn[3] = {640, 1280, 320};    // + slow turn 
 
-static int *weapon_keys[] = {
+int *weapon_keys[] = {
     &key_weapon1,
     &key_weapon2,
     &key_weapon3,

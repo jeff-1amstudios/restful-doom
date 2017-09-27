@@ -22,6 +22,7 @@ extern int key_down;
 extern int key_strafeleft;
 extern int key_straferight;
 extern int consoleplayer;
+extern int *weapon_keys[];
 
 api_response_t API_PostMessage(cJSON *req)
 {
@@ -31,12 +32,20 @@ api_response_t API_PostMessage(cJSON *req)
 
 api_response_t API_PostPlayerAction(cJSON *req)
 {
-    char *type = cJSON_GetObjectItem(req, "type")->valuestring;
-    cJSON *amount_obj = cJSON_GetObjectItem(req, "amount");
     int amount;
+    char *type;
+    cJSON *amount_obj;
+    cJSON *type_obj;
+    int *weapon_key;
 
-    // Optional amount field, default to 10 if not set
-    if (amount_obj == NULL)
+    type_obj = cJSON_GetObjectItem(req, "type");
+    if (type_obj == NULL)
+        return API_CreateErrorResponse(400, "Action type not specified");
+    type = type_obj->valuestring;
+    amount_obj = cJSON_GetObjectItem(req, "amount");
+
+    // Optional amount field, default to 10 if not set or set incorrectly
+    if (amount_obj == NULL || !cJSON_IsNumber(amount_obj))
         amount = 10;
     else
         amount = amount_obj->valueint;
@@ -88,6 +97,17 @@ api_response_t API_PostPlayerAction(cJSON *req)
         event_t event;
         event.type = ev_keydown;
         event.data1 = key_straferight;
+        event.data2 = 0;
+        D_PostEvent(&event);
+    }
+    else if (strcmp(type, "switch-weapon") == 0) {
+	if (amount < 1 || amount > 8)
+	    return API_CreateErrorResponse(400, "invalid weapon selected");
+	weapon_key = weapon_keys[amount - 1];
+        keys_down[*weapon_key] = 10;
+        event_t event;
+        event.type = ev_keydown;
+        event.data1 = *weapon_key;
         event.data2 = 0;
         D_PostEvent(&event);
     }
