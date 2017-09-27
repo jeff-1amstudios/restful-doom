@@ -7,6 +7,7 @@
 
 #include "p_local.h"
 #include "m_fixed.h"
+#include "m_argv.h"
 
 #define NUMKEYS   256
 #define NUMDESCRIPTIONS 125

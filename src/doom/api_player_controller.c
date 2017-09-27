@@ -180,24 +180,41 @@ api_response_t API_PatchPlayer(cJSON *req)
         }
         player->pendingweapon = weapon;
     }
+
     val = cJSON_GetObjectItem(req, "armor");
-    if (val) player->armorpoints = val->valueint;
+    if (val)
+    { 
+        if (M_CheckParm("-connect") == 0)
+            player->armorpoints = val->valueint;
+        else
+            return API_CreateErrorResponse(403, "clients may not change armor");
+    }
 
     val = cJSON_GetObjectItem(req, "health");
     if (val)
     {
-        // we have to set both of these at the same time
-        player->health = val->valueint;
-        player->mo->health = val->valueint;
+        if (M_CheckParm("-connect") == 0)
+        {
+            // we have to set both of these at the same time
+            player->health = val->valueint;
+            player->mo->health = val->valueint;
+        }
+	else
+            return API_CreateErrorResponse(403, "clients may not change health");
     }
 
     cJSON *flags = cJSON_GetObjectItem(req, "cheatFlags");
     if (flags)
     {
-      val = cJSON_GetObjectItem(flags, "CF_GODMODE");
-      if (val) API_FlipFlag(&player->cheats, CF_GODMODE, val->valueint == 1);
-      val = cJSON_GetObjectItem(flags, "CF_NOCLIP");
-      if (val) API_FlipFlag(&player->cheats, CF_NOCLIP, val->valueint == 1);
+        if (M_CheckParm("-connect") == 0)
+        {
+            val = cJSON_GetObjectItem(flags, "CF_GODMODE");
+            if (val) API_FlipFlag(&player->cheats, CF_GODMODE, val->valueint == 1);
+            val = cJSON_GetObjectItem(flags, "CF_NOCLIP");
+            if (val) API_FlipFlag(&player->cheats, CF_NOCLIP, val->valueint == 1);
+        }
+        else
+            return API_CreateErrorResponse(403, "clients may not apply cheats");
     }
 
     return API_GetPlayer();
