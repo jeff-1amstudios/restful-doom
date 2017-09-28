@@ -26,7 +26,25 @@ extern int *weapon_keys[];
 
 api_response_t API_PostMessage(cJSON *req)
 {
-    API_SetHUDMessage(cJSON_GetObjectItem(req, "text")->valuestring);
+    cJSON *message;
+
+    message = cJSON_GetObjectItem(req, "text");
+    if (message)
+    {
+        if (cJSON_IsString(message))
+        {
+            API_SetHUDMessage(cJSON_GetObjectItem(req, "text")->valuestring);
+        }
+        else
+        {
+            return (api_response_t){ 400, NULL };
+        }
+    }
+    else
+    {
+        return (api_response_t){ 400, NULL };
+    }
+    
     return (api_response_t){ 201, NULL };
 }
 
@@ -37,10 +55,11 @@ api_response_t API_PostPlayerAction(cJSON *req)
     cJSON *amount_obj;
     cJSON *type_obj;
     int *weapon_key;
+    event_t event;
 
     type_obj = cJSON_GetObjectItem(req, "type");
-    if (type_obj == NULL)
-        return API_CreateErrorResponse(400, "Action type not specified");
+    if (type_obj == NULL || !cJSON_IsString(type_obj))
+        return API_CreateErrorResponse(400, "Action type not specified or specified incorrectly");
     type = type_obj->valuestring;
     amount_obj = cJSON_GetObjectItem(req, "amount");
 
@@ -53,7 +72,6 @@ api_response_t API_PostPlayerAction(cJSON *req)
     if (strcmp(type, "forward") == 0)
     {
         keys_down[key_up] = amount;
-        event_t event;
         event.type = ev_keydown;
         event.data1 = key_up;
         event.data2 = 0;
@@ -62,88 +80,96 @@ api_response_t API_PostPlayerAction(cJSON *req)
     else if (strcmp(type, "backward") == 0)
     {
         keys_down[key_down] = amount;
-        event_t event;
         event.type = ev_keydown;
         event.data1 = key_down;
         event.data2 = 0;
         D_PostEvent(&event);
     }
-    else if (strcmp(type, "turn-left") == 0) {
+    else if (strcmp(type, "turn-left") == 0) 
+    {
         keys_down[key_left] = amount;
-        event_t event;
         event.type = ev_keydown;
         event.data1 = key_left;
         event.data2 = 0;
         D_PostEvent(&event);
     }
-    else if (strcmp(type, "turn-right") == 0) {
+    else if (strcmp(type, "turn-right") == 0) 
+    {
         keys_down[key_right] = amount;
-        event_t event;
         event.type = ev_keydown;
         event.data1 = key_right;
         event.data2 = 0;
         D_PostEvent(&event);
     }
-    else if (strcmp(type, "strafe-left") == 0) {
+    else if (strcmp(type, "strafe-left") == 0) 
+    {
         keys_down[key_strafeleft] = amount;
-        event_t event;
         event.type = ev_keydown;
         event.data1 = key_strafeleft;
         event.data2 = 0;
         D_PostEvent(&event);
     }
-    else if (strcmp(type, "strafe-right") == 0) {
+    else if (strcmp(type, "strafe-right") == 0) 
+    {
         keys_down[key_straferight] = amount;
-        event_t event;
         event.type = ev_keydown;
         event.data1 = key_straferight;
         event.data2 = 0;
         D_PostEvent(&event);
     }
-    else if (strcmp(type, "switch-weapon") == 0) {
-	if (amount < 1 || amount > 8)
-	    return API_CreateErrorResponse(400, "invalid weapon selected");
-	weapon_key = weapon_keys[amount - 1];
+    else if (strcmp(type, "switch-weapon") == 0) 
+    {
+	    if (amount < 1 || amount > 8)
+	        return API_CreateErrorResponse(400, "invalid weapon selected");
+        weapon_key = weapon_keys[amount - 1];
         keys_down[*weapon_key] = 10;
-        event_t event;
         event.type = ev_keydown;
         event.data1 = *weapon_key;
         event.data2 = 0;
         D_PostEvent(&event);
     }
-    else if (strcmp(type, "use") == 0) {
+    else if (strcmp(type, "use") == 0) 
+    {
         P_UseLines(&players[consoleplayer]);
     }
     else if (strcmp(type, "shoot") == 0)
     {
         P_FireWeapon(&players[consoleplayer]);
     }
-    else {
+    else 
+    {
         return API_CreateErrorResponse(400, "invalid action type");
     }
+
     return (api_response_t) {201, NULL};
 }
 
 cJSON* getPlayer(int playernum)
 {
-    player_t *player = &players[playernum];
-    cJSON *root = DescribeMObj(player->mo);
+    player_t *player;
+    cJSON *root;
+    cJSON *key_cards;
+    cJSON *cheats;
+
+    player = &players[playernum];
+    root = DescribeMObj(player->mo);
     cJSON_AddNumberToObject(root, "armor", player->armorpoints);
     cJSON_AddNumberToObject(root, "kills", player->killcount);
     cJSON_AddNumberToObject(root, "items", player->itemcount);
     cJSON_AddNumberToObject(root, "secrets", players->secretcount);
     cJSON_AddNumberToObject(root, "weapon", player->readyweapon);
     
-    cJSON *key_cards = cJSON_CreateObject();
+    key_cards = cJSON_CreateObject();
     cJSON_AddBoolToObject(key_cards, "blue", player->cards[it_bluecard]);
     cJSON_AddBoolToObject(key_cards, "red", player->cards[it_redcard]);
     cJSON_AddBoolToObject(key_cards, "yellow", player->cards[it_yellowcard]);
     cJSON_AddItemToObject(root, "keyCards", key_cards);
 
-    cJSON *cheats = cJSON_CreateObject();
+    cheats = cJSON_CreateObject();
     if (player->cheats & CF_NOCLIP) cJSON_AddTrueToObject(cheats, "CF_NOCLIP");
     if (player->cheats & CF_GODMODE) cJSON_AddTrueToObject(cheats, "CF_GODMODE");
     cJSON_AddItemToObject(root, "cheatFlags", cheats);
+
     return root;
 }
 
@@ -236,8 +262,13 @@ api_response_t API_PatchPlayer(cJSON *req)
     return API_GetPlayer();
 }
 
-api_response_t API_DeletePlayer() {
-  player_t *player = &players[consoleplayer];  
-  P_KillMobj(NULL, player->mo);
-  return API_GetPlayer();
+api_response_t API_DeletePlayer() 
+{
+    player_t *player;
+
+    if (M_CheckParm("-connect") > 0)
+        return API_CreateErrorResponse(403, "clients may not kill players");
+    player = &players[consoleplayer];  
+    P_KillMobj(NULL, player->mo);
+    return API_GetPlayer();
 }
