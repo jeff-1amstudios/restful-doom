@@ -52,6 +52,10 @@ mobj_t *FindObjectById(long id)
 
 api_response_t API_PostObject(cJSON *req)
 {
+    
+    if (M_CheckParm("-connect") > 0)
+        return API_CreateErrorResponse(403, "Clients may not spawn objects");
+
     mobj_t *pobj = players[consoleplayer].mo;
     fixed_t angle = pobj->angle >> ANGLETOFINESHIFT;
     fixed_t x, y, z;
@@ -123,6 +127,9 @@ api_response_t API_GetObjects(int max_distance)
 
 api_response_t API_PatchObject(int id, cJSON *req)
 {
+    if (M_CheckParm("-connect") > 0)
+        return API_CreateErrorResponse(403, "Clients may not modify objects");
+
     mobj_t *obj = FindObjectById(id);
     if (!obj)
     {
@@ -177,6 +184,9 @@ api_response_t API_PatchObject(int id, cJSON *req)
 
 api_response_t API_DeleteObject(int id)
 {
+    if (M_CheckParm("-connect") > 0)
+        return API_CreateErrorResponse(403, "Clients may not delete objects");
+
     mobj_t *obj = FindObjectById(id);
     if (!obj)
     {

@@ -53,6 +53,16 @@ cJSON* DescribeDoor(int id, line_t *line)
             break;
     }
     cJSON_AddStringToObject(door, "keyRequired", key_color);
+    cJSON *line_obj = cJSON_CreateObject();
+    cJSON *v1 = cJSON_CreateObject();
+    cJSON_AddNumberToObject(v1, "x", API_FixedToFloat(line->v1->x));
+    cJSON_AddNumberToObject(v1, "y", API_FixedToFloat(line->v1->y));
+    cJSON *v2 = cJSON_CreateObject();
+    cJSON_AddNumberToObject(v2, "x", API_FixedToFloat(line->v2->x));
+    cJSON_AddNumberToObject(v2, "y", API_FixedToFloat(line->v2->y));
+    cJSON_AddItemToObject(line_obj, "v1", v1);
+    cJSON_AddItemToObject(line_obj, "v2", v2);
+    cJSON_AddItemToObject(door, "line", line_obj);
     return door;
 }
 

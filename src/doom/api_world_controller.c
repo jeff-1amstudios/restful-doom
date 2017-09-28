@@ -11,14 +11,18 @@ extern int              gamemap;
 extern player_t         players[MAXPLAYERS];
 extern int consoleplayer;
 
-cJSON *DescribeWorldState() {
-  cJSON *root = cJSON_CreateObject();
-  cJSON_AddNumberToObject(root, "episode", gameepisode);
-  cJSON_AddNumberToObject(root, "map", gamemap);
+cJSON *DescribeWorldState() 
+{
+    cJSON *root;
+    sector_t *sector;
+    
+    root = cJSON_CreateObject();
+    cJSON_AddNumberToObject(root, "episode", gameepisode);
+    cJSON_AddNumberToObject(root, "map", gamemap);
 
-  sector_t *sector = players[consoleplayer].mo->subsector->sector;
-  cJSON_AddStringToObject(root, "lights", sector->lightlevel == 75 ? "off" : "on");
-  return root;
+    sector = players[consoleplayer].mo->subsector->sector;
+    cJSON_AddStringToObject(root, "lights", sector->lightlevel == 75 ? "off" : "on");
+    return root;
 }
 
 
@@ -28,42 +32,79 @@ api_response_t API_GetWorld(cJSON *req) {
   return (api_response_t) { 200, DescribeWorldState() };
 }
 
-api_response_t API_PatchWorld(cJSON *req) {
-  cJSON *val = cJSON_GetObjectItem(req, "episode");
-  boolean changed = false;
-  if (val) {
-    gameepisode = val->valueint;
-    changed = true;
-  }
-  val = cJSON_GetObjectItem(req, "map");
-  if (val) {
-    gamemap = val->valueint;
-    changed = true;
-  }
-  if (changed) {
-    G_DeferedInitNew (gameskill, gameepisode, gamemap);
-  }
+api_response_t API_PatchWorld(cJSON *req) 
+{
+    cJSON *val;
+    boolean changed = false;
 
-  val = cJSON_GetObjectItem(req, "lights");
-  if (val) {
-    if (strcmp(val->valuestring, "on") == 0) {
-        struct line_s *line = players[consoleplayer].mo->subsector->sector->lines[0];
-        EV_LightTurnOn(line, 255);
+    if (M_CheckParm("-connect") > 0)
+        return API_CreateErrorResponse(403, "clients may not patch the world");
+      
+    val = cJSON_GetObjectItem(req, "episode");
+    if (val) 
+    {
+        if (cJSON_IsNumber(val))
+        {
+            gameepisode = val->valueint;
+            changed = true;
+        }
+        else
+        {
+            return API_CreateErrorResponse(400, "episode must be integer");
+        }
     }
-    else {
-        struct line_s *line = players[consoleplayer].mo->subsector->sector->lines[0];
-        EV_LightTurnOn(line, 75);
+
+    val = cJSON_GetObjectItem(req, "map");
+    if (val) 
+    {
+        if (cJSON_IsNumber(val))
+        {
+            gamemap = val->valueint;
+            changed = true;
+        }
+        else
+        {
+            return API_CreateErrorResponse(400, "map must be integer");
+        }
     }
-  }
-  return (api_response_t) { 200, DescribeWorldState() };
+  
+    if (changed) 
+    {
+        G_DeferedInitNew (gameskill, gameepisode, gamemap);
+    }
+
+    val = cJSON_GetObjectItem(req, "lights");
+    if (val) 
+    {
+        if (cJSON_IsString(val))
+        {
+            if (strcmp(val->valuestring, "on") == 0) 
+            {
+                struct line_s *line = players[consoleplayer].mo->subsector->sector->lines[0];
+                EV_LightTurnOn(line, 255);
+            }
+            else 
+            {
+                struct line_s *line = players[consoleplayer].mo->subsector->sector->lines[0];
+                EV_LightTurnOn(line, 75);
+            }
+        }
+        else
+        {
+            return API_CreateErrorResponse(400, "lights must be string: on|off");
+        }
+    }
+  
+    return (api_response_t) { 200, DescribeWorldState() };
 }
 
 api_response_t API_GetWorldScreenshot()
 {
+    cJSON *body;
+
     unlink("/tmp/DOOM00.pcx");
     V_ScreenShot("/tmp/DOOM%02i.%s");
-    cJSON *body = cJSON_CreateObject();
+    body = cJSON_CreateObject();
     cJSON_AddStringToObject(body, "path", "/tmp/DOOM00.pcx");
-    api_response_t resp = {200, body};
-    return resp;
+    return (api_response_t) {200, body};
 }

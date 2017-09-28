@@ -24,6 +24,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <pthread.h>
 
 #include "config.h"
 #include "deh_main.h"
@@ -131,6 +132,7 @@ char		mapdir[1024];           // directory of development maps
 
 int             show_endoom = 1;
 
+extern pthread_mutex_t event_lock;  // for controlling access to post events
 
 void D_ConnectNetGame(void);
 void D_CheckNetGame(void);
@@ -148,7 +150,8 @@ void D_ProcessEvents (void)
     if (storedemo)
         return;
 
-    API_RunIO();
+    if (M_CheckParm("-apiport") > 0)
+        API_RunIO();
 	
     while ((ev = D_PopEvent()) != NULL)
     {
@@ -429,7 +432,7 @@ void D_DoomLoop (void)
 	G_BeginRecording ();
 
     main_loop_started = true;
-
+    pthread_mutex_init(&event_lock, NULL);
     TryRunTics();
 
     I_SetWindowTitle(gamedescription);
