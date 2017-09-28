@@ -130,6 +130,7 @@ void API_RunIO()
     {
         pthread_t tid;
         pthread_create(&tid, NULL, &API_RunIO_main, NULL);
+        pthread_detach(tid);
     }
 }
 
