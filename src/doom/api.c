@@ -80,7 +80,7 @@ void *API_RunIO_main(void *arg)
     IPaddress *remote_ip;
     const char *ip_str;
 
-    if (csd = SDLNet_TCP_Accept(server_sd))
+    if ((csd = SDLNet_TCP_Accept(server_sd)))
     {
         client_sd = csd;
         SDLNet_TCP_AddSocket(set, client_sd);
@@ -130,6 +130,7 @@ void API_RunIO()
     {
         pthread_t tid;
         pthread_create(&tid, NULL, &API_RunIO_main, NULL);
+        pthread_detach(tid);
     }
 }
 
