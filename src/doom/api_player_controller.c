@@ -170,51 +170,67 @@ api_response_t API_GetPlayers()
 
 api_response_t API_PatchPlayer(cJSON *req)
 {
-    player_t *player = &players[consoleplayer];
-    cJSON *val = cJSON_GetObjectItem(req, "weapon");
+    player_t *player;
+    cJSON *val;
+    cJSON *flags;
+
+    if (M_CheckParm("-connect") > 0)
+        return API_CreateErrorResponse(403, "clients may not patch the player");
+
+    player = &players[consoleplayer];
+
+    val = cJSON_GetObjectItem(req, "weapon");
     if (val)
     {
-        int weapon = val->valueint;
-        if (!player->weaponowned[weapon]) {
-            return API_CreateErrorResponse(400, "player does not have requested weapon");
-        }
-        player->pendingweapon = weapon;
+	    if (cJSON_IsNumber(val))
+            player->weaponowned[val->valueint - 1] = true;
+        else
+            return API_CreateErrorResponse(400, "Weapon value must be integer");
     }
 
     val = cJSON_GetObjectItem(req, "armor");
     if (val)
-    { 
-        if (M_CheckParm("-connect") == 0)
+    {
+	    if (cJSON_IsNumber(val))
             player->armorpoints = val->valueint;
         else
-            return API_CreateErrorResponse(403, "clients may not change armor");
+            return API_CreateErrorResponse(400, "Armor value must be integer");
     }
 
     val = cJSON_GetObjectItem(req, "health");
     if (val)
     {
-        if (M_CheckParm("-connect") == 0)
+	    if (cJSON_IsNumber(val))
         {
             // we have to set both of these at the same time
             player->health = val->valueint;
             player->mo->health = val->valueint;
         }
-	else
-            return API_CreateErrorResponse(403, "clients may not change health");
+        else
+        {
+            return API_CreateErrorResponse(400, "Health value must be integer");
+        }
     }
 
-    cJSON *flags = cJSON_GetObjectItem(req, "cheatFlags");
+    flags = cJSON_GetObjectItem(req, "cheatFlags");
     if (flags)
     {
-        if (M_CheckParm("-connect") == 0)
+        val = cJSON_GetObjectItem(flags, "CF_GODMODE");
+        if (val) 
         {
-            val = cJSON_GetObjectItem(flags, "CF_GODMODE");
-            if (val) API_FlipFlag(&player->cheats, CF_GODMODE, val->valueint == 1);
-            val = cJSON_GetObjectItem(flags, "CF_NOCLIP");
-            if (val) API_FlipFlag(&player->cheats, CF_NOCLIP, val->valueint == 1);
+	        if (cJSON_IsNumber(val))
+                API_FlipFlag(&player->cheats, CF_GODMODE, val->valueint == 1);
+            else
+                return API_CreateErrorResponse(400, "GODMODE value must be integer");
         }
-        else
-            return API_CreateErrorResponse(403, "clients may not apply cheats");
+        val = cJSON_GetObjectItem(flags, "CF_NOCLIP");
+        if (val) 
+        {
+	        if (cJSON_IsNumber(val))
+                API_FlipFlag(&player->cheats, CF_NOCLIP, val->valueint == 1);
+            else
+                return API_CreateErrorResponse(400, "NOCLIP value must be integer");
+        }
     }
 
     return API_GetPlayer();
