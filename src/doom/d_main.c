@@ -150,7 +150,8 @@ void D_ProcessEvents (void)
     if (storedemo)
         return;
 
-    API_RunIO();
+    if (M_CheckParm("-apiport") > 0)
+        API_RunIO();
 	
     while ((ev = D_PopEvent()) != NULL)
     {
