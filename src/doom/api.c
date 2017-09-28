@@ -80,7 +80,7 @@ void *API_RunIO_main(void *arg)
     IPaddress *remote_ip;
     const char *ip_str;
 
-    if ((csd = SDLNet_TCP_Accept(server_sd)))
+    if (csd = SDLNet_TCP_Accept(server_sd))
     {
         client_sd = csd;
         SDLNet_TCP_AddSocket(set, client_sd);
@@ -119,7 +119,7 @@ void *API_RunIO_main(void *arg)
     API_AfterTic();
     pthread_mutex_unlock(&api_lock);  // we're done so unlock the mutex and allow another API loop to start
 
-    return NULL;  // seems dumb but is required by prthead
+    return NULL;  // seems dumb but is required by pthread
 }
 
 void API_RunIO()
