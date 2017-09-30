@@ -10,15 +10,28 @@ extern int              gameepisode;
 extern int              gamemap;
 extern player_t         players[MAXPLAYERS];
 extern int consoleplayer;
+static char *doom_skills[] =
+{
+    "I'm too young to die.", "Hey, not too rough.", "Hurt me plenty.",
+    "Ultra-Violence.", "NIGHTMARE!",
+};
 
 cJSON *DescribeWorldState() 
 {
     cJSON *root;
     sector_t *sector;
+    char *iwadname;
+    int iwadparm;
     
     root = cJSON_CreateObject();
     cJSON_AddNumberToObject(root, "episode", gameepisode);
     cJSON_AddNumberToObject(root, "map", gamemap);
+    
+    iwadparm = M_CheckParmWithArgs("-iwad", 1);
+    iwadname = myargv[iwadparm + 1];
+    cJSON_AddStringToObject(root, "wad", iwadname);
+
+    cJSON_AddStringToObject(root, "skill", doom_skills[gameskill]);
 
     if (players[consoleplayer].mo != NULL)
     {
@@ -76,6 +89,20 @@ api_response_t API_PatchWorld(cJSON *req)
         }
     }
   
+    val = cJSON_GetObjectItem(req, "skill");
+    if (val) 
+    {
+        if (cJSON_IsNumber(val))
+        {
+            gameskill = val->valueint;
+            changed = true;
+        }
+        else
+        {
+            return API_CreateErrorResponse(400, "skill must be integer");
+        }
+    }
+
     if (changed) 
     {
         G_DeferedInitNew (gameskill, gameepisode, gamemap);
