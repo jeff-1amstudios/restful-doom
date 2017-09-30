@@ -29,21 +29,10 @@ api_response_t API_PostMessage(cJSON *req)
     cJSON *message;
 
     message = cJSON_GetObjectItem(req, "text");
-    if (message)
-    {
-        if (cJSON_IsString(message))
-        {
-            API_SetHUDMessage(cJSON_GetObjectItem(req, "text")->valuestring);
-        }
-        else
-        {
-            return (api_response_t){ 400, NULL };
-        }
-    }
+    if (message && cJSON_IsString(message))
+        API_SetHUDMessage(cJSON_GetObjectItem(req, "text")->valuestring);
     else
-    {
         return (api_response_t){ 400, NULL };
-    }
     
     return (api_response_t){ 201, NULL };
 }
