@@ -20,8 +20,16 @@ cJSON *DescribeWorldState()
     cJSON_AddNumberToObject(root, "episode", gameepisode);
     cJSON_AddNumberToObject(root, "map", gamemap);
 
-    sector = players[consoleplayer].mo->subsector->sector;
-    cJSON_AddStringToObject(root, "lights", sector->lightlevel == 75 ? "off" : "on");
+    if (players[consoleplayer].mo != NULL)
+    {
+        sector = players[consoleplayer].mo->subsector->sector;
+        cJSON_AddStringToObject(root, "lights", sector->lightlevel == 75 ? "off" : "on");
+    }
+    else
+    {
+        cJSON_AddStringToObject(root, "lights", "unknown");
+    }
+
     return root;
 }
 
