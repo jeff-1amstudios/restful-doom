@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <SDL_net.h>
+#include <pthread.h>
 
 #include "api.h"
 #include "d_player.h"
@@ -18,6 +19,7 @@
 extern api_obj_description_t api_descriptors[];
 char path[100];
 char hud_message[512];
+pthread_mutex_t api_lock;
 
 TCPsocket server_sd;
 TCPsocket client_sd;
@@ -35,6 +37,11 @@ extern int consoleplayer;
 void API_Init(int port)
 {
     IPaddress ip;
+    const char *host;
+
+    // mutex for ensuring only a single API thread is running
+    pthread_mutex_init(&api_lock, NULL);
+
     if (SDLNet_Init() < 0)
     {
         fprintf(stderr, "Error: SDLNet_Init: %s\n", SDLNet_GetError());
@@ -61,15 +68,17 @@ void API_Init(int port)
         keys_down[i] = -1;
     }
 
-    const char *host = SDLNet_ResolveIP(&ip);
+    host = SDLNet_ResolveIP(&ip);
     printf("API_Init: Listening for connections on %s:%d\n", host, port);
 }
 
-void API_RunIO()
+void *API_RunIO_main(void *arg)
 {
     TCPsocket csd;
     int recv_len = 0;
     char buffer[1024];
+    IPaddress *remote_ip;
+    const char *ip_str;
 
     if ((csd = SDLNet_TCP_Accept(server_sd)))
     {
@@ -98,9 +107,8 @@ void API_RunIO()
             API_SendResponse(response);
 
             // access log
-            IPaddress *remote_ip;
             remote_ip = SDLNet_TCP_GetPeerAddress(client_sd);
-            const char *ip_str = SDLNet_ResolveIP(remote_ip);
+            ip_str = SDLNet_ResolveIP(remote_ip);
             printf("access_log: %s - - - \"%s %s\" %d\n", ip_str, request.method, request.full_path, response.status_code);
 
             SDLNet_TCP_DelSocket(set, client_sd);
@@ -109,25 +117,43 @@ void API_RunIO()
     }
 
     API_AfterTic();
+    pthread_mutex_unlock(&api_lock);  // we're done so unlock the mutex and allow another API loop to start
+
+    return NULL;  // seems dumb but is required by prthead
+}
+
+void API_RunIO()
+{
+    // The main api loop takes a long time to run, so do it asynchronously
+    // If api is still being serviced, skip and try again next time
+    if (pthread_mutex_trylock(&api_lock) == 0 )
+    {
+        pthread_t tid;
+        pthread_create(&tid, NULL, &API_RunIO_main, NULL);
+        pthread_detach(tid);
+    }
 }
 
 boolean API_ParseRequest(char *buffer, int buffer_len, api_request_t *request)
 {
-    buffer[buffer_len] = 0;
     char method[10];
     char protocol[10];
-    int ret = sscanf(buffer, "%s%s%s", method, path, protocol);
+    struct yuarel url;
+    char *http_entity_body;
+    int ret;
+
+    buffer[buffer_len] = 0;
+    ret = sscanf(buffer, "%s%s%s", method, path, protocol);
     if (ret != 3) {
         return false;
     }
 
     strncpy(request->full_path, path, 512);
 
-    struct yuarel url;
     if (-1 == yuarel_parse(&url, path)) {
         return false;
     }
-    char *http_entity_body = strstr(buffer, "\r\n\r\n");
+    http_entity_body = strstr(buffer, "\r\n\r\n");
     if (http_entity_body == NULL)
     {
         return false;
@@ -278,8 +304,10 @@ api_response_t API_RouteRequest(api_request_t req)
 
 void API_SendResponse(api_response_t resp) {
     char buffer[255];
-    sprintf(buffer, "HTTP/1.0 %d\r\nConnection: close\r\nContent-Type:application/json\r\n\r\n", resp.status_code);
-    int len = strlen(buffer);
+    int len;
+
+    sprintf(buffer, "HTTP/1.0 %d\r\nConnection: close\r\nAccess-Control-Allow-Origin: *\r\nContent-Type:application/json\r\n\r\n", resp.status_code);
+    len = strlen(buffer);
     if (SDLNet_TCP_Send(client_sd, (void *)buffer, len) < len) {
         printf("failed to send all bytes\n");
     }
@@ -336,8 +364,9 @@ int angleToDegrees(angle_t angle)
 
 cJSON* DescribeMObj(mobj_t *obj)
 {
-    cJSON *root = cJSON_CreateObject();
     cJSON *pos;
+    cJSON *flags;
+    cJSON *root = cJSON_CreateObject();
     cJSON_AddNumberToObject(root, "id", obj->id);
     cJSON_AddItemToObject(root, "position", pos = cJSON_CreateObject());
     cJSON_AddNumberToObject(pos, "x", API_FixedToFloat(obj->x));
@@ -361,7 +390,7 @@ cJSON* DescribeMObj(mobj_t *obj)
         cJSON_AddNumberToObject(root, "attacking", obj->target->id);
     }
 
-    cJSON *flags = cJSON_CreateObject();
+    flags = cJSON_CreateObject();
     if (obj->flags & MF_SPECIAL) cJSON_AddTrueToObject(flags, "MF_SPECIAL");
     if (obj->flags & MF_SOLID) cJSON_AddTrueToObject(flags, "MF_SOLID");
     if (obj->flags & MF_SHOOTABLE) cJSON_AddTrueToObject(flags, "MF_SHOOTABLE");
