@@ -152,6 +152,8 @@ cJSON* getPlayer(int playernum)
     cJSON *root;
     cJSON *key_cards;
     cJSON *cheats;
+    cJSON *weapons;
+    cJSON *ammo;
 
     player = &players[playernum];
     root = DescribeMObj(player->mo);
@@ -160,7 +162,23 @@ cJSON* getPlayer(int playernum)
     cJSON_AddNumberToObject(root, "items", player->itemcount);
     cJSON_AddNumberToObject(root, "secrets", players->secretcount);
     cJSON_AddNumberToObject(root, "weapon", player->readyweapon);
-    
+
+    weapons = cJSON_CreateObject();
+    cJSON_AddBoolToObject(weapons, "Handgun", player->weaponowned[1]);
+    cJSON_AddBoolToObject(weapons, "Shotgun", player->weaponowned[2]);
+    cJSON_AddBoolToObject(weapons, "Chaingun", player->weaponowned[3]);
+    cJSON_AddBoolToObject(weapons, "Rocket Launcher", player->weaponowned[4]);
+    cJSON_AddBoolToObject(weapons, "Plasma Rifle", player->weaponowned[5]);
+    cJSON_AddBoolToObject(weapons, "BFG?", player->weaponowned[6]);
+    cJSON_AddItemToObject(root, "weapons", weapons);
+
+    ammo = cJSON_CreateObject();
+    cJSON_AddNumberToObject(ammo, "Bullets", player->ammo[0]);
+    cJSON_AddNumberToObject(ammo, "Shells", player->ammo[1]);
+    cJSON_AddNumberToObject(ammo, "Cells", player->ammo[2]);
+    cJSON_AddNumberToObject(ammo, "Rockets", player->ammo[3]);
+    cJSON_AddItemToObject(root, "ammo", ammo);
+
     key_cards = cJSON_CreateObject();
     cJSON_AddBoolToObject(key_cards, "blue", player->cards[it_bluecard]);
     cJSON_AddBoolToObject(key_cards, "red", player->cards[it_redcard]);
@@ -200,6 +218,7 @@ api_response_t API_PatchPlayer(cJSON *req)
 {
     player_t *player;
     cJSON *val;
+    cJSON *amount;
     cJSON *flags;
 
     if (M_CheckParm("-connect") > 0)
@@ -216,6 +235,23 @@ api_response_t API_PatchPlayer(cJSON *req)
             return API_CreateErrorResponse(400, "Weapon value must be integer");
     }
 
+    val = cJSON_GetObjectItem(req, "ammo");
+    if (val)
+    {
+        amount = cJSON_GetObjectItem(req, "amount");
+        if (amount && cJSON_IsNumber(amount))
+        {
+	        if (cJSON_IsNumber(val))
+                player->ammo[val->valueint] = amount->valueint;
+            else
+                return API_CreateErrorResponse(400, "Ammo value must be integer");
+        }
+        else
+        {
+            return API_CreateErrorResponse(400, "Must provide ammo amount (integer)");
+        }
+    }
+    
     val = cJSON_GetObjectItem(req, "armor");
     if (val)
     {
