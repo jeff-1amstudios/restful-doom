@@ -64,10 +64,23 @@ api_response_t API_PostPlayerAction(cJSON *req)
     amount_obj = cJSON_GetObjectItem(req, "amount");
 
     // Optional amount field, default to 10 if not set or set incorrectly
-    if (amount_obj == NULL || !cJSON_IsNumber(amount_obj))
+    if (amount_obj == NULL)
+    {
         amount = 10;
+    }
     else
+    {
+        if (!cJSON_IsNumber(amount_obj))
+        {
+            return API_CreateErrorResponse(400, "amount must be a number");
+        }
         amount = amount_obj->valueint;
+        if (amount < 1)
+        {
+            return API_CreateErrorResponse(400, "amount must be positive and non-zero");
+        }
+    }
+    
 
     if (strcmp(type, "forward") == 0)
     {
