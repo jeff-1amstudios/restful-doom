@@ -282,6 +282,33 @@ api_response_t API_RouteRequest(api_request_t req)
        
         return API_CreateErrorResponse(405, "Method not allowed");
     }
+
+    else if (strcmp(path, "api/world/movetest") == 0) {
+        if (strcmp(method, "GET") == 0)
+        {
+            printf(req.url.query);
+           
+            int id;
+            float x;
+            float y;
+            struct yuarel_param params[3];
+            int p = yuarel_parse_query(req.url.query, '&', params, 3);
+            while (p-- > 0) {
+                if (strcmp("id", params[p].key) == 0) {
+                    id = atoi(params[p].val); 
+                }
+                if (strcmp("x", params[p].key) == 0) {
+                    x = atoi(params[p].val);
+                }
+                if (strcmp("y", params[p].key) == 0) {
+                    y = atoi(params[p].val);
+                }
+            }
+            return API_GetCheckTraverse(id,x,y);
+        }
+        return API_CreateErrorResponse(405, "Method not allowed");
+    }
+
     else if (strcmp(path, "api/world/doors") == 0) {
         if (strcmp(method, "GET") == 0)
         {

@@ -239,3 +239,28 @@ api_response_t API_GetLineOfSightToObject(int id, int id2)
     api_response_t resp = {200, root};
     return resp;
 }
+
+//API_GetCheckMove
+api_response_t API_GetCheckTraverse(int id, float x, float y)
+{
+    
+    mobj_t *obj = FindObjectById(id);
+   
+    if (!obj)
+    {
+        printf("obj is null\n");
+        return API_CreateErrorResponse(404, "object not found");
+    }
+
+    printf("API_GetCheckTraverse attempt for: %d:%d to %d:%d \n",obj->x,obj->y,API_FloatToFixed(x),API_FloatToFixed(y));
+    boolean result = P_PathTraverse(obj->x, obj->y,API_FloatToFixed(x),API_FloatToFixed(y), PT_ADDLINES,PTR_AimTraverse);
+    
+    cJSON *root = cJSON_CreateObject();
+    cJSON_AddNumberToObject(root, "id", id);
+    cJSON_AddNumberToObject(root, "x", x);
+    cJSON_AddNumberToObject(root, "y", y);
+    cJSON_AddBoolToObject(root,"result", result);
+
+    api_response_t resp = {200, root};
+    return resp;
+}
