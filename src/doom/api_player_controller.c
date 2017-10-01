@@ -9,6 +9,7 @@
 #include "../d_event.h"
 #include "../doomkeys.h"
 #include "p_local.h"
+#include "../net_server.h"
 
 // externally-defined game variables
 extern player_t players[MAXPLAYERS];
@@ -23,6 +24,8 @@ extern int key_strafeleft;
 extern int key_straferight;
 extern int consoleplayer;
 extern int *weapon_keys[];
+extern char *player_names[];
+extern net_client_t *sv_players[];
 
 api_response_t API_PostMessage(cJSON *req)
 {
@@ -157,6 +160,7 @@ cJSON* getPlayer(int playernum)
 
     player = &players[playernum];
     root = DescribeMObj(player->mo);
+    cJSON_AddStringToObject(root, "colour", player_names[playernum]);
     cJSON_AddNumberToObject(root, "armor", player->armorpoints);
     cJSON_AddNumberToObject(root, "kills", player->killcount);
     cJSON_AddNumberToObject(root, "items", player->itemcount);
@@ -199,15 +203,32 @@ api_response_t API_GetPlayer()
     return (api_response_t) {200, root};
 }
 
+// Player stats specific to multiplayer
 api_response_t API_GetPlayers()
 {
-    cJSON *root = cJSON_CreateArray();
+    cJSON *root;
+    cJSON *player;
+    player_t *player_obj;
+    mobj_t *attacker;
+
+    root = cJSON_CreateArray();
     for (int i = 0; i < MAXPLAYERS; i++)
     {
         if ((&players[i])->mo != 0x0)
         {
-            cJSON *player = getPlayer(i);
+            player_obj = &players[i];            
+            attacker = player_obj->attacker;
+
+            player = getPlayer(i);
             cJSON_AddBoolToObject(player, "isConsolePlayer", i == consoleplayer);
+            if (M_CheckParm("-server") > 0 || M_CheckParm("-privateserver") > 0)
+                cJSON_AddStringToObject(player, "name", sv_players[i]->name);
+
+            if (attacker != NULL)
+                cJSON_AddNumberToObject(player, "last_attacked_by", attacker->id);
+            else
+                cJSON_AddNumberToObject(player, "last_attacked_by", 0);
+
             cJSON_AddItemToArray(root, player);
         }
     }
