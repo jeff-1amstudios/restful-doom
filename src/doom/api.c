@@ -214,6 +214,21 @@ api_response_t API_RouteRequest(api_request_t req)
         }
         return API_CreateErrorResponse(405, "Method not allowed");
     }
+    else if (strstr(path, "api/players/") != NULL) {
+        int id;
+        if (sscanf(path, "api/players/%d", &id) != 1) {
+            return API_CreateErrorResponse(404, "path not found");
+        }
+        else if (strcmp(method, "GET") == 0)
+        {
+            return API_GetPlayerById(id);
+        }
+        else if (strcmp(method, "PATCH") == 0) 
+        {
+            return API_PatchPlayerById(json, id);
+        }
+        return API_CreateErrorResponse(405, "Method not allowed");
+    }
     else if (strcmp(path, "api/world") == 0) {
         if (strcmp(method, "GET") == 0) {
             return API_GetWorld();
@@ -271,7 +286,6 @@ api_response_t API_RouteRequest(api_request_t req)
     else if (strstr(path, "api/world/los/") != NULL) {
         int id;
         int id2;
-       
 
         sscanf(path, "api/world/los/%d/%d", &id,&id2);
       

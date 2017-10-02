@@ -203,6 +203,28 @@ api_response_t API_GetPlayer()
     return (api_response_t) {200, root};
 }
 
+int getPlayerNumForId(int id)
+{
+    for (int playernum=0; playernum<=MAXPLAYERS; playernum++)
+    {
+        if (playernum == MAXPLAYERS)
+            return -1; 
+        if ((&players[playernum])->mo != 0x0 && (&players[playernum])->mo->id == id)
+            return playernum;
+    }
+    return -1;
+}
+
+api_response_t API_GetPlayerById(int id)
+{
+    int playernum;
+
+    if ((playernum = getPlayerNumForId(id)) == -1)
+        return API_CreateErrorResponse(400, "Unknown player ID");
+    else
+        return (api_response_t) {200, getPlayer(playernum)};
+}
+
 // Player stats specific to multiplayer
 api_response_t API_GetPlayers()
 {
@@ -235,17 +257,18 @@ api_response_t API_GetPlayers()
     return (api_response_t) {200, root};
 }
 
-api_response_t API_PatchPlayer(cJSON *req)
+api_response_t patchPlayer(cJSON *req, int playernum)
 {
     player_t *player;
     cJSON *val;
     cJSON *amount;
     cJSON *flags;
+    cJSON *root;
 
     if (M_CheckParm("-connect") > 0)
         return API_CreateErrorResponse(403, "clients may not patch the player");
 
-    player = &players[consoleplayer];
+    player = &players[playernum];
 
     val = cJSON_GetObjectItem(req, "weapon");
     if (val)
@@ -318,7 +341,23 @@ api_response_t API_PatchPlayer(cJSON *req)
         }
     }
 
-    return API_GetPlayer();
+    root = getPlayer(playernum);
+    return (api_response_t) {200, root};
+}
+
+api_response_t API_PatchPlayer(cJSON *req)
+{
+    return patchPlayer(req, consoleplayer);
+}
+
+api_response_t API_PatchPlayerById(cJSON *req, int id)
+{
+    int playernum;
+
+    if ((playernum = getPlayerNumForId(id)) == -1)
+        return API_CreateErrorResponse(400, "Unknown player ID");
+    else
+        return patchPlayer(req, playernum);
 }
 
 api_response_t API_DeletePlayer() 
