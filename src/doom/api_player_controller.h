@@ -9,3 +9,4 @@ api_response_t API_GetPlayers();
 api_response_t API_PatchPlayer(cJSON *req);
 api_response_t API_PatchPlayerById(cJSON *req, int id);
 api_response_t API_DeletePlayer();
+api_response_t API_DeletePlayerById(int id);

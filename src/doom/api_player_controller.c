@@ -360,13 +360,30 @@ api_response_t API_PatchPlayerById(cJSON *req, int id)
         return patchPlayer(req, playernum);
 }
 
-api_response_t API_DeletePlayer() 
+api_response_t deletePlayer(int playernum)
 {
     player_t *player;
+    cJSON *player_obj;
 
     if (M_CheckParm("-connect") > 0)
-        return API_CreateErrorResponse(403, "clients may not kill players");
-    player = &players[consoleplayer];  
+        return API_CreateErrorResponse(403, "Clients may not kill players");
+    player = &players[playernum];  
     P_KillMobj(NULL, player->mo);
-    return API_GetPlayer();
+    player_obj = getPlayer(playernum);
+    return (api_response_t) {200, player_obj};
+}
+
+api_response_t API_DeletePlayer() 
+{
+    return deletePlayer(consoleplayer);
+}
+
+api_response_t API_DeletePlayerById(int id)
+{
+    int playernum;
+
+    if ((playernum = getPlayerNumForId(id)) == -1)
+        return API_CreateErrorResponse(400, "Unknown player ID");
+    else
+        return deletePlayer(playernum);
 }

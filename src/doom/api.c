@@ -171,6 +171,13 @@ boolean API_ParseRequest(char *buffer, int buffer_len, api_request_t *request)
 // ----
 api_response_t API_RouteRequest(api_request_t req)
 {
+    int id;
+    int id2;
+    int distance;
+    int p;
+    float x = 0.0;
+    float y = 0.0;
+    struct yuarel_param params[3];
     char *method = req.method;
     char *path = req.url.path;
     cJSON *json = cJSON_Parse(req.body);
@@ -215,7 +222,6 @@ api_response_t API_RouteRequest(api_request_t req)
         return API_CreateErrorResponse(405, "Method not allowed");
     }
     else if (strstr(path, "api/players/") != NULL) {
-        int id;
         if (sscanf(path, "api/players/%d", &id) != 1) {
             return API_CreateErrorResponse(404, "path not found");
         }
@@ -226,6 +232,10 @@ api_response_t API_RouteRequest(api_request_t req)
         else if (strcmp(method, "PATCH") == 0) 
         {
             return API_PatchPlayerById(json, id);
+        }
+        else if (strcmp(method, "DELETE") == 0) 
+        {
+            return API_DeletePlayerById(id);
         }
         return API_CreateErrorResponse(405, "Method not allowed");
     }
@@ -252,9 +262,8 @@ api_response_t API_RouteRequest(api_request_t req)
         }
         else if (strcmp(method, "GET") == 0)
         {
-            int distance = 0;
-            struct yuarel_param params[1];
-            int p = yuarel_parse_query(req.url.query, '&', params, 1);
+            distance = 0;
+            p = yuarel_parse_query(req.url.query, '&', params, 1);
             while (p-- > 0) {
                 if (strcmp("distance", params[p].key) == 0) {
                     distance = atoi(params[p].val);
@@ -265,7 +274,6 @@ api_response_t API_RouteRequest(api_request_t req)
         return API_CreateErrorResponse(405, "Method not allowed");
     }
     else if (strstr(path, "api/world/objects/") != NULL) {
-        int id;
         if (sscanf(path, "api/world/objects/%d", &id) != 1) {
             return API_CreateErrorResponse(404, "path not found");
         }
@@ -284,9 +292,6 @@ api_response_t API_RouteRequest(api_request_t req)
         return API_CreateErrorResponse(405, "Method not allowed");
     }
     else if (strstr(path, "api/world/los/") != NULL) {
-        int id;
-        int id2;
-
         sscanf(path, "api/world/los/%d/%d", &id,&id2);
       
         if (strcmp(method, "GET") == 0)
@@ -300,13 +305,7 @@ api_response_t API_RouteRequest(api_request_t req)
     else if (strcmp(path, "api/world/movetest") == 0) {
         if (strcmp(method, "GET") == 0)
         {
-            printf(req.url.query);
-           
-            int id;
-            float x;
-            float y;
-            struct yuarel_param params[3];
-            int p = yuarel_parse_query(req.url.query, '&', params, 3);
+            p = yuarel_parse_query(req.url.query, '&', params, 3);
             while (p-- > 0) {
                 if (strcmp("id", params[p].key) == 0) {
                     id = atoi(params[p].val); 
@@ -326,9 +325,8 @@ api_response_t API_RouteRequest(api_request_t req)
     else if (strcmp(path, "api/world/doors") == 0) {
         if (strcmp(method, "GET") == 0)
         {
-            int distance = 0;
-            struct yuarel_param params[1];
-            int p = yuarel_parse_query(req.url.query, '&', params, 1);
+            distance = 0;
+            p = yuarel_parse_query(req.url.query, '&', params, 1);
             while (p-- > 0) {
                 if (strcmp("distance", params[p].key) == 0) {
                     distance = atoi(params[p].val);
@@ -340,7 +338,6 @@ api_response_t API_RouteRequest(api_request_t req)
     }
     else if (strstr(path, "api/world/doors/") != NULL)
     {
-        int id;
         if (sscanf(path, "api/world/doors/%d", &id) != 1) {
             return API_CreateErrorResponse(404, "path not found");
         }
