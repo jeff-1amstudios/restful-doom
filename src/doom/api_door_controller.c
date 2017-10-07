@@ -119,6 +119,9 @@ api_response_t API_GetDoor(int id)
 
 api_response_t API_PatchDoor(int id, cJSON *req)
 {
+    if (M_CheckParm("-connect") > 0)
+        return API_CreateErrorResponse(403, "clients may not patch doors");
+
     if (!IsLineADoor(&lines[id]))
     {
         return API_CreateErrorResponse(404, "door does not exist");

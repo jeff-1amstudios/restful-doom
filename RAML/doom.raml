@@ -20,91 +20,113 @@ baseUri: http://localhost:6666
         body:
           application/json:
             type: Player
-            example: | 
-              {
-                "id": 0,
-                "position": {
-                  "x": -32,
-                  "y": -240,
-                  "z": 24
-                },
-                "angle": 90,
-                "health": 100,
-                "type": "Player",
-                "flags": {
-                  "MF_SOLID": true,
-                  "MF_SHOOTABLE": true
-                },
-                "armor": 0,
-                "kills": 0,
-                "items": 0,
-                "secrets": 0,
-                "weapon": 1,
-                "keyCards": {
-                  "blue": false,
-                  "red": false,
-                  "yellow": false
-                },
-                "cheatFlags": {}
-              }
+            example: !include ./player_example.raml 
   patch:
-    description: Update the player
+    description: Update the player (RESTRICTED)
     body:
       application/json:
         type: Player
         example: |
           {
-            "weapon": 3
+            "weapon": 3,
+            "ammo": 1, "amount": 100,
+            "armor": 100,
+            "health": 100,
+            "cheatFlags": {
+              "CF_GODMODE": 1,
+              "CF_NOCLIP": 1
+            }
           }
     responses:
       200:
         body:
           application/json:
             type: Player
-            example: | 
-              {
-                "id": 0,
-                "position": {
-                  "x": -32,
-                  "y": -240,
-                  "z": 24
-                },
-                "angle": 90,
-                "height": 56,
-                "health": 100,
-                "type": "Player",
-                "flags": {
-                  "MF_SOLID": true,
-                  "MF_SHOOTABLE": true,
-                  "MF_DROPOFF": true,
-                  "MF_PICKUP": true,
-                  "MF_NOTDMATCH": true
-                },
-                "armor": 0,
-                "kills": 0,
-                "items": 0,
-                "secrets": 0,
-                "weapon": 1,
-                "keyCards": {
-                  "blue": false,
-                  "red": false,
-                  "yellow": false
-                },
-                "cheatFlags": {}
-              }
+            example: !include ./player_example.raml
+      400:
+        description: Invalid parameters
+      403:
+        description: Permission denied.  Multiplayer clients may not perform this action
 
   /actions:
     post:
-      description: Create an action for the player to perform
+      description: Create an action for the player to perform (RESTRICTED)
       body:
         application/json:
           type: PlayerAction
           example: |
             {
-              "type": "shoot"
+              "type": "strafe-left",
+              "amount": 25
             }
       responses:
         201:
+        400:
+            description: Invalid parameters
+        403:
+            description: Permission denied.  Multiplayer clients may not perform this action
+
+/api/players:
+  description: Multiplayer endpoints
+  get:
+    description: Query all players in game
+    responses:
+      200:
+        body:
+          application/json:
+            type: Player
+            example: | 
+              [
+                player1,
+                player2
+              ]
+
+  /{id}:
+    description: Specific player in Multiplayer endpoints
+    get:
+      description: Query a specific player
+      response:
+        200:
+          body:
+            application/json:
+              type: Player
+              example: !include ./player_example.raml
+        404:
+            description: Invalid player selected
+    patch:
+      description: Patch a specific player (RESTRICTED)
+      body:
+        application/json:
+          type: Player
+          example: |
+            {
+              "weapon": 3,
+              "ammo": 1, "amount": 100,
+              "armor": 100,
+              "health": 100,
+              "cheatFlags": {
+                "CF_GODMODE": 1,
+                "CF_NOCLIP": 1
+              }
+            }
+      responses:
+        200:
+        403: 
+          description: Permission denied.  Multiplayer clients may not perform this action
+        404:
+          description: Invalid player selected
+    post:
+      description: Post and action for a specific player (RESTRICTED)
+      body:
+        application/json:
+          type: Player
+          example: !include ./player_example.raml
+      responses:
+        200:
+        403: 
+          description: Permission denied.  Multiplayer clients may not perform this action
+        404:
+          description: Invalid player selected
 
 /api/world:
   description: World endpoints
@@ -118,10 +140,13 @@ baseUri: http://localhost:6666
             example: | 
               {
                 "episode": 1,
-                "map": 2
+                "map": 2,
+                "wad": "doom1.wad",
+                "skill": "Hurt me plenty",
+                "lights": "on"
               }
   patch:
-    description: Update the current world state
+    description: Update the current world state (RESTRICTED)
     body: 
       application/json:
         type: World
@@ -137,8 +162,15 @@ baseUri: http://localhost:6666
             example: | 
               {
                 "episode": 1,
-                "map": 3
+                "map": 3,
+                "wad": "doom1.wad",
+                "skill": "Hurt me plenty",
+                "lights": "on"
               }
+      400:
+          description: Invalid parameters
+      403:
+          description: Permission denied.  Multiplayer clients may not perform this action
 
   /doors:
     description: World doors endpoints
@@ -154,7 +186,18 @@ baseUri: http://localhost:6666
                   {
                     "id": 140,
                     "state": "closed",
-                    "keyRequired": "none"
+                    "keyRequired": "none",
+                    "specialType": 1,
+                    "line": {
+                      "v1": {
+                        "x": 3072,
+                        "y": -4016
+                      },
+                      "v2": {
+                        "x": 2944,
+                        "y": -4016
+                      }
+                    }
                   }
                 ]
     /{id}:
@@ -173,13 +216,24 @@ baseUri: http://localhost:6666
                   {
                     "id": 140,
                     "state": "closed",
-                    "keyRequired": "none"
+                    "keyRequired": "none",
+                    "specialType": 1,
+                    "line": {
+                      "v1": {
+                        "x": 3072,
+                        "y": -4016
+                      },
+                      "v2": {
+                        "x": 2944,
+                        "y": -4016
+                      }
+                    }
                   }
           404:
             description: The specified door does not exist
 
       patch:
-        description: Update the specified door
+        description: Update the specified door (RESTRICTED)
         body: 
           application/json:
             type: Door
@@ -196,10 +250,63 @@ baseUri: http://localhost:6666
                   {
                     "id": 140,
                     "state": "open",
-                    "keyRequired": "none"
+                    "keyRequired": "none",
+                    "specialType": 1,
+                    "line": {
+                      "v1": {
+                        "x": 3072,
+                        "y": -4016
+                      },
+                      "v2": {
+                        "x": 2944,
+                        "y": -4016
+                      }
+                    }
                   }
+          403:
+            description: Permission denied.  Multiplayer clients may not perform this action
           404:
             description: The specified door does not exist
+
+  /los/{id1}/{id2}:
+    description: Test if there is a line of sight between two objects
+    uriParameters: 
+      id1 
+        description: "id of first object"
+      id2: 
+        description: "id of second object"
+    get:
+      responses:
+        200:
+          body:
+            application/json:
+              example: |
+                {
+                  "los": true
+                }
+        404:
+          description: Invalid id
+        
+  /movetest:
+    description: Test if an object has a clear path to move
+    get:
+      queryParameters:
+        id: 
+          description: "id of the object to test"
+        x:
+          description: "x co-ordinate of the destination"       
+        y:
+          description: "y co-ordinate of the destination"       
+      responses:
+        200:
+          body:
+            application/json:
+              example: |
+                {
+                  "result": true
+                }
+        404:
+          description: Invalid id
 
   /objects:
     description: World objects endpoints
@@ -215,7 +322,7 @@ baseUri: http://localhost:6666
             application/json:
               type: MapObject[]
     post:
-      description: Spawn a new map object
+      description: Spawn a new map object (RESTRICTED)
       body:
         application/json:
           type: SpawnMapObject
@@ -232,6 +339,8 @@ baseUri: http://localhost:6666
               example: !include map_object_example.raml
         400:
           description: The specified object type is invalid
+        403:
+          description: Permission denied.  Multiplayer clients may not perform this action
     /{id}:
       get:
         description: Query the specified map object
@@ -244,7 +353,7 @@ baseUri: http://localhost:6666
           404:
             description: The specified object does not exist
       patch:
-        description: Update the specifed map object
+        description: Update the specifed map object (RESTRICTED)
         body:
           application/json:
             type: MapObject
@@ -264,12 +373,16 @@ baseUri: http://localhost:6666
               application/json:
                 type: MapObject
                 example: !include map_object_example.raml
+          403:
+            description: Permission denied.  Multiplayer clients may not perform this action
           404:
             description: The specified object does not exist
       delete:
-        description: Delete the specified map object
+        description: Delete the specified map object (RESTRICTED)
         responses:
           204:
             description: The specified object was deleted
+          403:
+            description: Permission denied.  Multiplayer clients may not perform this action
           404:
             description: The specified object does not exist
