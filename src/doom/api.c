@@ -213,6 +213,14 @@ api_response_t API_RouteRequest(api_request_t req)
         }
         return API_CreateErrorResponse(405, "Method not allowed");
     }
+    else if (strcmp(path, "api/player/turn") == 0)
+    {
+        if (strcmp(method, "POST") == 0)
+        {
+            return API_PostTurnDegrees(json);
+        }
+        return API_CreateErrorResponse(405, "Method not allowed");
+    }
     else if (strcmp(path, "api/players") == 0)
     {
         if (strcmp(method, "GET") == 0)
@@ -381,6 +389,26 @@ api_response_t API_CreateErrorResponse(int status, char *message) {
   return (api_response_t) { status, body };
 }
 
+void postRightTurnEvent(void)
+{
+    event_t event;
+    event.type = ev_mouse;
+    event.data1 = 0;  // buttons held down
+    event.data2 = 10;  // turn
+    event.data3 = 0;  // move (max 16 units per tic)
+    D_PostEvent(&event);
+}
+
+void postLeftTurnEvent(void)
+{
+    event_t event;
+    event.type = ev_mouse;
+    event.data1 = 0;  // buttons held down
+    event.data2 = -10;  // turn
+    event.data3 = 0;  // move (max 16 units per tic)
+    D_PostEvent(&event);
+}
+
 void API_AfterTic() {
 
     for (int i = 0; i < NUMKEYS; i++) {
@@ -394,6 +422,26 @@ void API_AfterTic() {
             event.data2 = 0;
             D_PostEvent(&event);
         }
+    }
+
+    if (right_turn_target_angle != NULL)
+    {
+        player_t *player = &players[consoleplayer];
+        int angle = angleToDegrees(player->mo->angle);
+        if (angle != right_turn_target_angle)
+            postRightTurnEvent();
+        else
+            right_turn_target_angle = NULL;
+    }
+
+    if (left_turn_target_angle != NULL)
+    {
+        player_t *player = &players[consoleplayer];
+        int angle = angleToDegrees(player->mo->angle);
+        if (angle != left_turn_target_angle)
+            postLeftTurnEvent();
+        else
+            left_turn_target_angle = NULL;
     }
 }
 

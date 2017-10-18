@@ -40,6 +40,41 @@ api_response_t API_PostMessage(cJSON *req)
     return (api_response_t){ 201, NULL };
 }
 
+// e.g. to turn right to a target of 90 degrees {"type": "right", "amount": 90}
+api_response_t API_PostTurnDegrees(cJSON *req)
+{
+    cJSON *type_obj;
+    cJSON *amount_obj;
+    char *type;
+    int degrees;
+    event_t event;
+
+    type_obj = cJSON_GetObjectItem(req, "type");
+    if (type_obj == NULL || !cJSON_IsString(type_obj))
+        return API_CreateErrorResponse(400, "Action type not specified or specified incorrectly");
+    type = type_obj->valuestring;
+    amount_obj = cJSON_GetObjectItem(req, "target_angle");
+    if (!cJSON_IsNumber(amount_obj))
+    {
+        return API_CreateErrorResponse(400, "amount must be a number");
+    }
+    degrees = amount_obj->valueint;
+
+    if (strcmp(type, "right") == 0)
+    {
+        postRightTurnEvent();
+        right_turn_target_angle = degrees;
+    }
+    if (strcmp(type, "left") == 0)
+    {
+        postLeftTurnEvent();
+        left_turn_target_angle = degrees;
+    }
+
+    return (api_response_t) {201, NULL};
+}
+
+
 api_response_t API_PostPlayerAction(cJSON *req)
 {
     int amount;
