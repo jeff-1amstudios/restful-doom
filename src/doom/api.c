@@ -39,8 +39,13 @@ void API_Init(int port)
     IPaddress ip;
     const char *host;
 
+    right_turn_target_angle = -1;
+    left_turn_target_angle = -1;
+
+#ifdef DOOM_THREADED
     // mutex for ensuring only a single API thread is running
     pthread_mutex_init(&api_lock, NULL);
+#endif
 
     if (SDLNet_Init() < 0)
     {
@@ -117,13 +122,15 @@ void *API_RunIO_main(void *arg)
     }
 
     API_AfterTic();
+#ifdef DOOM_THREADED
     pthread_mutex_unlock(&api_lock);  // we're done so unlock the mutex and allow another API loop to start
-
+#endif
     return NULL;  // seems dumb but is required by pthread
 }
 
 void API_RunIO()
 {
+#ifdef DOOM_THREADED
     // The main api loop takes a long time to run, so do it asynchronously
     // If api is still being serviced, skip and try again next time
     if (pthread_mutex_trylock(&api_lock) == 0 )
@@ -132,6 +139,9 @@ void API_RunIO()
         pthread_create(&tid, NULL, &API_RunIO_main, NULL);
         pthread_detach(tid);
     }
+#else
+    API_RunIO_main(NULL);
+#endif
 }
 
 boolean API_ParseRequest(char *buffer, int buffer_len, api_request_t *request)
@@ -409,6 +419,11 @@ void postLeftTurnEvent(void)
     D_PostEvent(&event);
 }
 
+int angleToDegrees(angle_t angle)
+{
+    return ((double)angle / ANG_MAX) * 360;
+}
+
 void API_AfterTic() {
 
     for (int i = 0; i < NUMKEYS; i++) {
@@ -424,24 +439,24 @@ void API_AfterTic() {
         }
     }
 
-    if (right_turn_target_angle != NULL)
+    if (right_turn_target_angle > 0)
     {
         player_t *player = &players[consoleplayer];
         int angle = angleToDegrees(player->mo->angle);
         if (angle != right_turn_target_angle)
             postRightTurnEvent();
         else
-            right_turn_target_angle = NULL;
+            right_turn_target_angle = -1;
     }
 
-    if (left_turn_target_angle != NULL)
+    if (left_turn_target_angle > 0)
     {
         player_t *player = &players[consoleplayer];
         int angle = angleToDegrees(player->mo->angle);
         if (angle != left_turn_target_angle)
             postLeftTurnEvent();
         else
-            left_turn_target_angle = NULL;
+            left_turn_target_angle = -1;
     }
 }
 
@@ -455,11 +470,6 @@ float API_FixedToFloat(fixed_t fixed) {
 
 fixed_t API_FloatToFixed(float val) {
     return (int)(val * (1<<16));
-}
-
-int angleToDegrees(angle_t angle) 
-{
-    return ((double)angle / ANG_MAX) * 360;
 }
 
 cJSON* DescribeMObj(mobj_t *obj)

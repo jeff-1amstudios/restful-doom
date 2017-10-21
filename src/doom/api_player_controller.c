@@ -47,7 +47,6 @@ api_response_t API_PostTurnDegrees(cJSON *req)
     cJSON *amount_obj;
     char *type;
     int degrees;
-    event_t event;
 
     type_obj = cJSON_GetObjectItem(req, "type");
     if (type_obj == NULL || !cJSON_IsString(type_obj))

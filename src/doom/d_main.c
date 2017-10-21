@@ -432,7 +432,9 @@ void D_DoomLoop (void)
 	G_BeginRecording ();
 
     main_loop_started = true;
+#ifdef DOOM_THREADED
     pthread_mutex_init(&event_lock, NULL);
+#endif
     TryRunTics();
 
     I_SetWindowTitle(gamedescription);
