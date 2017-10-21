@@ -66,6 +66,22 @@ baseUri: http://localhost:6666
         403:
             description: Permission denied.  Multiplayer clients may not perform this action
 
+/api/player/turn:
+  description: Turn the player accurately
+  post:
+    description: Post the absolute angle that you want your player to turn to and the direction to do it in.
+    body:
+      application/json:
+        example: |
+          {
+            "type": "left",
+            "target_angle": 96
+          }
+    responses:
+      200:
+      400: 
+        description: Invalid parameters (angle must be between 0 and 359)
+
 /api/players:
   description: Multiplayer endpoints
   get:

@@ -40,7 +40,7 @@ api_response_t API_PostMessage(cJSON *req)
     return (api_response_t){ 201, NULL };
 }
 
-// e.g. to turn right to a target of 90 degrees {"type": "right", "amount": 90}
+// e.g. to turn right to a target of 90 degrees {"type": "right", "target_angle": 90}
 api_response_t API_PostTurnDegrees(cJSON *req)
 {
     cJSON *type_obj;
@@ -56,9 +56,12 @@ api_response_t API_PostTurnDegrees(cJSON *req)
     amount_obj = cJSON_GetObjectItem(req, "target_angle");
     if (!cJSON_IsNumber(amount_obj))
     {
-        return API_CreateErrorResponse(400, "amount must be a number");
+        return API_CreateErrorResponse(400, "target_angle must be a number");
     }
     degrees = amount_obj->valueint;
+
+    if (degrees < 0 || degrees > 359)
+        return API_CreateErrorResponse(400, "target_angle must be between 0 and 359");
 
     if (strcmp(type, "right") == 0)
     {
