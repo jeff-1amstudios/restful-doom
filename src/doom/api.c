@@ -3,6 +3,7 @@
 #include <string.h>
 #include <SDL_net.h>
 #include <pthread.h>
+#include <math.h>
 
 #include "api.h"
 #include "d_player.h"
@@ -39,8 +40,7 @@ void API_Init(int port)
     IPaddress ip;
     const char *host;
 
-    right_turn_target_angle = -1;
-    left_turn_target_angle = -1;
+    target_angle = -1;
 
 #ifdef DOOM_THREADED
     // mutex for ensuring only a single API thread is running
@@ -399,22 +399,12 @@ api_response_t API_CreateErrorResponse(int status, char *message) {
   return (api_response_t) { status, body };
 }
 
-void postRightTurnEvent(void)
+void postTurnEvent(int amount)
 {
     event_t event;
     event.type = ev_mouse;
     event.data1 = 0;  // buttons held down
-    event.data2 = 10;  // turn
-    event.data3 = 0;  // move (max 16 units per tic)
-    D_PostEvent(&event);
-}
-
-void postLeftTurnEvent(void)
-{
-    event_t event;
-    event.type = ev_mouse;
-    event.data1 = 0;  // buttons held down
-    event.data2 = -10;  // turn
+    event.data2 = amount;  // turn (positive clockwise)
     event.data3 = 0;  // move (max 16 units per tic)
     D_PostEvent(&event);
 }
@@ -422,6 +412,24 @@ void postLeftTurnEvent(void)
 int angleToDegrees(angle_t angle)
 {
     return ((double)angle / ANG_MAX) * 360;
+}
+
+int remainingDegrees(int playerAngle, int targetAngle)
+{
+    int tentativeAngle = playerAngle + (360 - targetAngle);
+    if (tentativeAngle > 359)
+        return 360 - tentativeAngle;
+    else
+        return tentativeAngle;
+}
+
+int turnAmount(int remainingAngle)
+{
+    int amount = pow(remainingAngle, 2);
+    if (amount > 500)
+        return 500;
+    else
+        return amount;
 }
 
 void API_AfterTic() {
@@ -439,24 +447,19 @@ void API_AfterTic() {
         }
     }
 
-    if (right_turn_target_angle > 0)
+    if (target_angle > 0)
     {
         player_t *player = &players[consoleplayer];
         int angle = angleToDegrees(player->mo->angle);
-        if (angle != right_turn_target_angle)
-            postRightTurnEvent();
+        int remaining = remainingDegrees(angle, target_angle);
+        if (remaining == 0) {
+            target_angle = -1;
+            return;
+        }
         else
-            right_turn_target_angle = -1;
-    }
-
-    if (left_turn_target_angle > 0)
-    {
-        player_t *player = &players[consoleplayer];
-        int angle = angleToDegrees(player->mo->angle);
-        if (angle != left_turn_target_angle)
-            postLeftTurnEvent();
-        else
-            left_turn_target_angle = -1;
+        {
+            postTurnEvent(turnAmount(remaining));
+        }
     }
 }
 

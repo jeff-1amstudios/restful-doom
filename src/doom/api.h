@@ -13,8 +13,7 @@
 #define NUMDESCRIPTIONS 125
 
 int keys_down[NUMKEYS];
-int right_turn_target_angle;
-int left_turn_target_angle;
+int target_angle;
 
 void API_Init(int port);
 void API_RunIO();
@@ -23,8 +22,7 @@ fixed_t API_FloatToFixed(float val);
 cJSON* DescribeMObj(mobj_t *obj);
 void API_SetHUDMessage(char *msg);
 void API_FlipFlag(int *flags, int mask, boolean on);
-void postRightTurnEvent(void);
-void postLeftTurnEvent(void);
+void postTurnEvent(int amount);
 
 typedef struct {
   int id;

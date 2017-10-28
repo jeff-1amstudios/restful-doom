@@ -830,8 +830,8 @@ boolean G_Responder (event_t* ev)
 		 
       case ev_mouse: 
         SetMouseButtons(ev->data1);
-	mousex = ev->data2*(mouseSensitivity+5)/10; 
-	mousey = ev->data3*(mouseSensitivity+5)/10; 
+	mousex = ev->data2*(mouseSensitivity+5)/10;
+	mousey = ev->data3*(mouseSensitivity+5)/10;
 	return true;    // eat events 
  
       case ev_joystick: 

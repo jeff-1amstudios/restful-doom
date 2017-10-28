@@ -62,15 +62,10 @@ api_response_t API_PostTurnDegrees(cJSON *req)
     if (degrees < 0 || degrees > 359)
         return API_CreateErrorResponse(400, "target_angle must be between 0 and 359");
 
-    if (strcmp(type, "right") == 0)
+    if (strcmp(type, "right") == 0 || strcmp(type, "left") == 0)
     {
-        postRightTurnEvent();
-        right_turn_target_angle = degrees;
-    }
-    if (strcmp(type, "left") == 0)
-    {
-        postLeftTurnEvent();
-        left_turn_target_angle = degrees;
+        postTurnEvent(10);
+        target_angle = degrees;
     }
 
     return (api_response_t) {201, NULL};
