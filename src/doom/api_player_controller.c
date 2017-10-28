@@ -206,6 +206,7 @@ cJSON* getPlayer(int playernum)
     cJSON_AddBoolToObject(weapons, "Rocket Launcher", player->weaponowned[4]);
     cJSON_AddBoolToObject(weapons, "Plasma Rifle", player->weaponowned[5]);
     cJSON_AddBoolToObject(weapons, "BFG?", player->weaponowned[6]);
+    cJSON_AddBoolToObject(weapons, "Chainsaw", player->weaponowned[7]);
     cJSON_AddItemToObject(root, "weapons", weapons);
 
     ammo = cJSON_CreateObject();
