@@ -48,10 +48,6 @@ api_response_t API_PostTurnDegrees(cJSON *req)
     char *type;
     int degrees;
 
-    type_obj = cJSON_GetObjectItem(req, "type");
-    if (type_obj == NULL || !cJSON_IsString(type_obj))
-        return API_CreateErrorResponse(400, "Action type not specified or specified incorrectly");
-    type = type_obj->valuestring;
     amount_obj = cJSON_GetObjectItem(req, "target_angle");
     if (!cJSON_IsNumber(amount_obj))
     {
@@ -62,11 +58,8 @@ api_response_t API_PostTurnDegrees(cJSON *req)
     if (degrees < 0 || degrees > 359)
         return API_CreateErrorResponse(400, "target_angle must be between 0 and 359");
 
-    if (strcmp(type, "right") == 0 || strcmp(type, "left") == 0)
-    {
-        postTurnEvent(10);
-        target_angle = degrees;
-    }
+    target_angle = degrees;
+    turnPlayer();
 
     return (api_response_t) {201, NULL};
 }

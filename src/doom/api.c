@@ -414,15 +414,6 @@ int angleToDegrees(angle_t angle)
     return ((double)angle / ANG_MAX) * 360;
 }
 
-int remainingDegrees(int playerAngle, int targetAngle)
-{
-    int tentativeAngle = playerAngle + (360 - targetAngle);
-    if (tentativeAngle > 359)
-        return 360 - tentativeAngle;
-    else
-        return tentativeAngle;
-}
-
 int turnAmount(int remainingAngle)
 {
     int amount = pow(remainingAngle, 2);
@@ -432,8 +423,45 @@ int turnAmount(int remainingAngle)
         return amount;
 }
 
-void API_AfterTic() {
+void turnPlayer()
+{
+    int direction;
+    int remaining;
+    int playerAngle;
+    int zeroedTarget;
 
+    if (target_angle >= 0)
+    {
+        player_t *player = &players[consoleplayer];
+        playerAngle = angleToDegrees(player->mo->angle);
+        zeroedTarget = target_angle - playerAngle;
+        if (zeroedTarget < 0)
+            zeroedTarget = zeroedTarget + 360;
+
+        if (zeroedTarget < 180)
+        {
+            remaining = abs(zeroedTarget);
+            direction = -1;
+        }
+        else
+        {
+            remaining = zeroedTarget;
+            direction = 1;
+        }
+
+        if (remaining == 0) {
+            target_angle =- 1;
+            return;
+        }
+        else
+        {
+            postTurnEvent(turnAmount(remaining) * direction);
+        }
+    }
+}
+
+void API_AfterTic()
+{
     for (int i = 0; i < NUMKEYS; i++) {
         if (keys_down[i] >= 0) {
             keys_down[i]--;
@@ -447,20 +475,7 @@ void API_AfterTic() {
         }
     }
 
-    if (target_angle > 0)
-    {
-        player_t *player = &players[consoleplayer];
-        int angle = angleToDegrees(player->mo->angle);
-        int remaining = remainingDegrees(angle, target_angle);
-        if (remaining == 0) {
-            target_angle = -1;
-            return;
-        }
-        else
-        {
-            postTurnEvent(turnAmount(remaining));
-        }
-    }
+    turnPlayer();
 }
 
 // Helper methods

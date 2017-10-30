@@ -22,7 +22,7 @@ fixed_t API_FloatToFixed(float val);
 cJSON* DescribeMObj(mobj_t *obj);
 void API_SetHUDMessage(char *msg);
 void API_FlipFlag(int *flags, int mask, boolean on);
-void postTurnEvent(int amount);
+void turnPlayer();
 
 typedef struct {
   int id;
