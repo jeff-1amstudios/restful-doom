@@ -428,26 +428,19 @@ void turnPlayer()
     int direction;
     int remaining;
     int playerAngle;
-    int zeroedTarget;
 
     if (target_angle >= 0)
     {
         player_t *player = &players[consoleplayer];
         playerAngle = angleToDegrees(player->mo->angle);
-        zeroedTarget = target_angle - playerAngle;
-        if (zeroedTarget < 0)
-            zeroedTarget = zeroedTarget + 360;
+        remaining = target_angle - playerAngle;
+        if (remaining < 0)
+            remaining = remaining + 360;
 
-        if (zeroedTarget < 180)
-        {
-            remaining = abs(zeroedTarget);
+        if (remaining < 180)
             direction = -1;
-        }
         else
-        {
-            remaining = zeroedTarget;
             direction = 1;
-        }
 
         if (remaining == 0) {
             target_angle =- 1;
