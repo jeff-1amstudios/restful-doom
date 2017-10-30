@@ -2,7 +2,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <SDL_net.h>
-#include <pthread.h>
 #include <math.h>
 
 #include "api.h"
@@ -20,7 +19,6 @@
 extern api_obj_description_t api_descriptors[];
 char path[100];
 char hud_message[512];
-pthread_mutex_t api_lock;
 
 TCPsocket server_sd;
 TCPsocket client_sd;
@@ -41,11 +39,6 @@ void API_Init(int port)
     const char *host;
 
     target_angle = -1;
-
-#ifdef DOOM_THREADED
-    // mutex for ensuring only a single API thread is running
-    pthread_mutex_init(&api_lock, NULL);
-#endif
 
     if (SDLNet_Init() < 0)
     {
@@ -77,7 +70,7 @@ void API_Init(int port)
     printf("API_Init: Listening for connections on %s:%d\n", host, port);
 }
 
-void *API_RunIO_main(void *arg)
+void API_RunIO()
 {
     TCPsocket csd;
     int recv_len = 0;
@@ -122,26 +115,6 @@ void *API_RunIO_main(void *arg)
     }
 
     API_AfterTic();
-#ifdef DOOM_THREADED
-    pthread_mutex_unlock(&api_lock);  // we're done so unlock the mutex and allow another API loop to start
-#endif
-    return NULL;  // seems dumb but is required by pthread
-}
-
-void API_RunIO()
-{
-#ifdef DOOM_THREADED
-    // The main api loop takes a long time to run, so do it asynchronously
-    // If api is still being serviced, skip and try again next time
-    if (pthread_mutex_trylock(&api_lock) == 0 )
-    {
-        pthread_t tid;
-        pthread_create(&tid, NULL, &API_RunIO_main, NULL);
-        pthread_detach(tid);
-    }
-#else
-    API_RunIO_main(NULL);
-#endif
 }
 
 boolean API_ParseRequest(char *buffer, int buffer_len, api_request_t *request)

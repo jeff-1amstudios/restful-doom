@@ -24,7 +24,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <pthread.h>
 
 #include "config.h"
 #include "deh_main.h"
@@ -131,8 +130,6 @@ char		wadfile[1024];		// primary wad file
 char		mapdir[1024];           // directory of development maps
 
 int             show_endoom = 1;
-
-extern pthread_mutex_t event_lock;  // for controlling access to post events
 
 void D_ConnectNetGame(void);
 void D_CheckNetGame(void);
@@ -432,9 +429,6 @@ void D_DoomLoop (void)
 	G_BeginRecording ();
 
     main_loop_started = true;
-#ifdef DOOM_THREADED
-    pthread_mutex_init(&event_lock, NULL);
-#endif
     TryRunTics();
 
     I_SetWindowTitle(gamedescription);

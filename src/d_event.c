@@ -20,7 +20,6 @@
 //
 
 #include <stdlib.h>
-#include <pthread.h>
 #include "d_event.h"
 
 #define MAXEVENTS 64
@@ -28,7 +27,6 @@
 static event_t events[MAXEVENTS];
 static int eventhead;
 static int eventtail;
-pthread_mutex_t event_lock;
 
 //
 // D_PostEvent
@@ -36,16 +34,8 @@ pthread_mutex_t event_lock;
 //
 void D_PostEvent (event_t* ev)
 {
-#ifdef DOOM_THREADED
-    // This can now be called from another thread, so mutex required before proceeding
-    pthread_mutex_trylock(&event_lock);
     events[eventhead] = *ev;
     eventhead = (eventhead + 1) % MAXEVENTS;
-    pthread_mutex_unlock(&event_lock);
-#else
-    events[eventhead] = *ev;
-    eventhead = (eventhead + 1) % MAXEVENTS;
-#endif
 }
 
 // Read an event from the queue.

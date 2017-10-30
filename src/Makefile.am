@@ -14,10 +14,9 @@ execgames_SCRIPTS = $(SETUP_BINARIES)
 AM_CFLAGS = -I$(top_srcdir)/textscreen            \
             -I$(top_srcdir)/opl                   \
             -I$(top_srcdir)/pcsound               \
-            @SDLMIXER_CFLAGS@ @SDLNET_CFLAGS@     \
-            -pthread
+            @SDLMIXER_CFLAGS@ @SDLNET_CFLAGS@    
 
-AM_LDFLAGS = -lpthread
+AM_LDFLAGS = 
 
 # Common source files used by absolutely everything:
 
