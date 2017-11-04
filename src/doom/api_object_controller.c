@@ -122,13 +122,10 @@ api_response_t API_GetObjects(int max_distance)
         while (t)
         {
             dist = API_FixedToFloat(P_AproxDistance(player->x - t->x, player->y - t->y));
-            if (max_distance > 0)
+            if ((max_distance > 0 && dist > max_distance))
             {
-                if ((max_distance > 0 && dist > max_distance) || mobjinfo[t->type].doomednum == -1)
-                {
-                    t = t->snext;
-                    continue;
-                }
+                t = t->snext;
+                continue;
             }
 
             objJson = DescribeMObj(t);
