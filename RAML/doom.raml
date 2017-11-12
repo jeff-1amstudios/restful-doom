@@ -50,7 +50,7 @@ baseUri: http://localhost:6666
 
   /actions:
     post:
-      description: Create an action for the player to perform (RESTRICTED)
+      description: Create an action for the player to perform
       body:
         application/json:
           type: PlayerAction
@@ -63,18 +63,15 @@ baseUri: http://localhost:6666
         201:
         400:
             description: Invalid parameters
-        403:
-            description: Permission denied.  Multiplayer clients may not perform this action
 
 /api/player/turn:
   description: Turn the player accurately
   post:
-    description: Post the absolute angle that you want your player to turn to and the direction to do it in.
+    description: Post the absolute angle that you want your player to turn.  Engine will pick the best direction
     body:
       application/json:
         example: |
           {
-            "type": "left",
             "target_angle": 96
           }
     responses:
