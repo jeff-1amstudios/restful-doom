@@ -12,6 +12,12 @@ chocolate-heretic-setup
 chocolate-hexen-setup
 chocolate-strife-setup
 chocolate-setup
+restful-doom
+restful-doom-setup
+restful-setup
+massif.*
+callgrind.*
+core
 *.exe
 *.desktop
 *.appdata.xml

@@ -4,4 +4,8 @@ properties:
   type:
     type: string
     description: Action to perform
-    example: "shoot | forward | backward | turn-left | turn-right | use"
+    example: "shoot | forward | backward | turn-left | turn-right | use | strafe-left | strafe-right | switch-weapon"
+  amount:
+    type: integer
+    description: Amount to move or turn (ignord for shoot and use types), or weapon to select.  Defaults to 10 if omitted
+    example: "25"

@@ -131,7 +131,6 @@ char		mapdir[1024];           // directory of development maps
 
 int             show_endoom = 1;
 
-
 void D_ConnectNetGame(void);
 void D_CheckNetGame(void);
 
@@ -148,7 +147,8 @@ void D_ProcessEvents (void)
     if (storedemo)
         return;
 
-    API_RunIO();
+    if (M_CheckParm("-apiport") > 0)
+        API_RunIO();
 	
     while ((ev = D_PopEvent()) != NULL)
     {
@@ -429,7 +429,6 @@ void D_DoomLoop (void)
 	G_BeginRecording ();
 
     main_loop_started = true;
-
     TryRunTics();
 
     I_SetWindowTitle(gamedescription);

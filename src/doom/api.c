@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <SDL_net.h>
+#include <math.h>
 
 #include "api.h"
 #include "d_player.h"
@@ -35,6 +36,10 @@ extern int consoleplayer;
 void API_Init(int port)
 {
     IPaddress ip;
+    const char *host;
+
+    target_angle = -1;
+
     if (SDLNet_Init() < 0)
     {
         fprintf(stderr, "Error: SDLNet_Init: %s\n", SDLNet_GetError());
@@ -61,7 +66,7 @@ void API_Init(int port)
         keys_down[i] = -1;
     }
 
-    const char *host = SDLNet_ResolveIP(&ip);
+    host = SDLNet_ResolveIP(&ip);
     printf("API_Init: Listening for connections on %s:%d\n", host, port);
 }
 
@@ -70,6 +75,8 @@ void API_RunIO()
     TCPsocket csd;
     int recv_len = 0;
     char buffer[1024];
+    IPaddress *remote_ip;
+    const char *ip_str;
 
     if ((csd = SDLNet_TCP_Accept(server_sd)))
     {
@@ -98,9 +105,8 @@ void API_RunIO()
             API_SendResponse(response);
 
             // access log
-            IPaddress *remote_ip;
             remote_ip = SDLNet_TCP_GetPeerAddress(client_sd);
-            const char *ip_str = SDLNet_ResolveIP(remote_ip);
+            ip_str = SDLNet_ResolveIP(remote_ip);
             printf("access_log: %s - - - \"%s %s\" %d\n", ip_str, request.method, request.full_path, response.status_code);
 
             SDLNet_TCP_DelSocket(set, client_sd);
@@ -113,21 +119,24 @@ void API_RunIO()
 
 boolean API_ParseRequest(char *buffer, int buffer_len, api_request_t *request)
 {
-    buffer[buffer_len] = 0;
     char method[10];
     char protocol[10];
-    int ret = sscanf(buffer, "%s%s%s", method, path, protocol);
+    struct yuarel url;
+    char *http_entity_body;
+    int ret;
+
+    buffer[buffer_len] = 0;
+    ret = sscanf(buffer, "%s%s%s", method, path, protocol);
     if (ret != 3) {
         return false;
     }
 
     strncpy(request->full_path, path, 512);
 
-    struct yuarel url;
     if (-1 == yuarel_parse(&url, path)) {
         return false;
     }
-    char *http_entity_body = strstr(buffer, "\r\n\r\n");
+    http_entity_body = strstr(buffer, "\r\n\r\n");
     if (http_entity_body == NULL)
     {
         return false;
@@ -145,6 +154,13 @@ boolean API_ParseRequest(char *buffer, int buffer_len, api_request_t *request)
 // ----
 api_response_t API_RouteRequest(api_request_t req)
 {
+    int id;
+    int id2;
+    int distance;
+    int p;
+    float x = 0.0;
+    float y = 0.0;
+    struct yuarel_param params[3];
     char *method = req.method;
     char *path = req.url.path;
     cJSON *json = cJSON_Parse(req.body);
@@ -180,11 +196,37 @@ api_response_t API_RouteRequest(api_request_t req)
         }
         return API_CreateErrorResponse(405, "Method not allowed");
     }
+    else if (strcmp(path, "api/player/turn") == 0)
+    {
+        if (strcmp(method, "POST") == 0)
+        {
+            return API_PostTurnDegrees(json);
+        }
+        return API_CreateErrorResponse(405, "Method not allowed");
+    }
     else if (strcmp(path, "api/players") == 0)
     {
         if (strcmp(method, "GET") == 0)
         {
             return API_GetPlayers();
+        }
+        return API_CreateErrorResponse(405, "Method not allowed");
+    }
+    else if (strstr(path, "api/players/") != NULL) {
+        if (sscanf(path, "api/players/%d", &id) != 1) {
+            return API_CreateErrorResponse(404, "path not found");
+        }
+        else if (strcmp(method, "GET") == 0)
+        {
+            return API_GetPlayerById(id);
+        }
+        else if (strcmp(method, "PATCH") == 0) 
+        {
+            return API_PatchPlayerById(json, id);
+        }
+        else if (strcmp(method, "DELETE") == 0) 
+        {
+            return API_DeletePlayerById(id);
         }
         return API_CreateErrorResponse(405, "Method not allowed");
     }
@@ -211,9 +253,8 @@ api_response_t API_RouteRequest(api_request_t req)
         }
         else if (strcmp(method, "GET") == 0)
         {
-            int distance = 0;
-            struct yuarel_param params[1];
-            int p = yuarel_parse_query(req.url.query, '&', params, 1);
+            distance = 0;
+            p = yuarel_parse_query(req.url.query, '&', params, 1);
             while (p-- > 0) {
                 if (strcmp("distance", params[p].key) == 0) {
                     distance = atoi(params[p].val);
@@ -224,7 +265,6 @@ api_response_t API_RouteRequest(api_request_t req)
         return API_CreateErrorResponse(405, "Method not allowed");
     }
     else if (strstr(path, "api/world/objects/") != NULL) {
-        int id;
         if (sscanf(path, "api/world/objects/%d", &id) != 1) {
             return API_CreateErrorResponse(404, "path not found");
         }
@@ -242,12 +282,42 @@ api_response_t API_RouteRequest(api_request_t req)
         }
         return API_CreateErrorResponse(405, "Method not allowed");
     }
+    else if (strstr(path, "api/world/los/") != NULL) {
+        sscanf(path, "api/world/los/%d/%d", &id,&id2);
+      
+        if (strcmp(method, "GET") == 0)
+        {
+            return API_GetLineOfSightToObject(id,id2);
+        }
+       
+        return API_CreateErrorResponse(405, "Method not allowed");
+    }
+
+    else if (strcmp(path, "api/world/movetest") == 0) {
+        if (strcmp(method, "GET") == 0)
+        {
+            p = yuarel_parse_query(req.url.query, '&', params, 3);
+            while (p-- > 0) {
+                if (strcmp("id", params[p].key) == 0) {
+                    id = atoi(params[p].val); 
+                }
+                if (strcmp("x", params[p].key) == 0) {
+                    x = atoi(params[p].val);
+                }
+                if (strcmp("y", params[p].key) == 0) {
+                    y = atoi(params[p].val);
+                }
+            }
+            return API_GetCheckTraverse(id,x,y);
+        }
+        return API_CreateErrorResponse(405, "Method not allowed");
+    }
+
     else if (strcmp(path, "api/world/doors") == 0) {
         if (strcmp(method, "GET") == 0)
         {
-            int distance = 0;
-            struct yuarel_param params[1];
-            int p = yuarel_parse_query(req.url.query, '&', params, 1);
+            distance = 0;
+            p = yuarel_parse_query(req.url.query, '&', params, 1);
             while (p-- > 0) {
                 if (strcmp("distance", params[p].key) == 0) {
                     distance = atoi(params[p].val);
@@ -259,7 +329,6 @@ api_response_t API_RouteRequest(api_request_t req)
     }
     else if (strstr(path, "api/world/doors/") != NULL)
     {
-        int id;
         if (sscanf(path, "api/world/doors/%d", &id) != 1) {
             return API_CreateErrorResponse(404, "path not found");
         }
@@ -278,8 +347,10 @@ api_response_t API_RouteRequest(api_request_t req)
 
 void API_SendResponse(api_response_t resp) {
     char buffer[255];
-    sprintf(buffer, "HTTP/1.0 %d\r\nConnection: close\r\nContent-Type:application/json\r\n\r\n", resp.status_code);
-    int len = strlen(buffer);
+    int len;
+
+    sprintf(buffer, "HTTP/1.0 %d\r\nConnection: close\r\nAccess-Control-Allow-Origin: *\r\nContent-Type:application/json\r\n\r\n", resp.status_code);
+    len = strlen(buffer);
     if (SDLNet_TCP_Send(client_sd, (void *)buffer, len) < len) {
         printf("failed to send all bytes\n");
     }
@@ -301,8 +372,62 @@ api_response_t API_CreateErrorResponse(int status, char *message) {
   return (api_response_t) { status, body };
 }
 
-void API_AfterTic() {
+void postTurnEvent(int amount)
+{
+    event_t event;
+    event.type = ev_mouse;
+    event.data1 = 0;  // buttons held down
+    event.data2 = amount;  // turn (positive clockwise)
+    event.data3 = 0;  // move (max 16 units per tic)
+    D_PostEvent(&event);
+}
 
+int angleToDegrees(angle_t angle)
+{
+    return ((double)angle / ANG_MAX) * 360;
+}
+
+int turnAmount(int remainingAngle)
+{
+    int amount = pow(remainingAngle, 2);
+    if (amount > 500)
+        return 500;
+    else
+        return amount;
+}
+
+void turnPlayer()
+{
+    int direction;
+    int remaining;
+    int playerAngle;
+
+    if (target_angle >= 0)
+    {
+        player_t *player = &players[consoleplayer];
+        playerAngle = angleToDegrees(player->mo->angle);
+        remaining = target_angle - playerAngle;
+        if (remaining < 0)
+            remaining = remaining + 360;
+
+        if (remaining < 180)
+            direction = -1;
+        else
+            direction = 1;
+
+        if (remaining == 0) {
+            target_angle =- 1;
+            return;
+        }
+        else
+        {
+            postTurnEvent(turnAmount(remaining) * direction);
+        }
+    }
+}
+
+void API_AfterTic()
+{
     for (int i = 0; i < NUMKEYS; i++) {
         if (keys_down[i] >= 0) {
             keys_down[i]--;
@@ -315,6 +440,8 @@ void API_AfterTic() {
             D_PostEvent(&event);
         }
     }
+
+    turnPlayer();
 }
 
 // Helper methods
@@ -329,15 +456,11 @@ fixed_t API_FloatToFixed(float val) {
     return (int)(val * (1<<16));
 }
 
-int angleToDegrees(angle_t angle) 
-{
-    return ((double)angle / ANG_MAX) * 360;
-}
-
 cJSON* DescribeMObj(mobj_t *obj)
 {
-    cJSON *root = cJSON_CreateObject();
     cJSON *pos;
+    cJSON *flags;
+    cJSON *root = cJSON_CreateObject();
     cJSON_AddNumberToObject(root, "id", obj->id);
     cJSON_AddItemToObject(root, "position", pos = cJSON_CreateObject());
     cJSON_AddNumberToObject(pos, "x", API_FixedToFloat(obj->x));
@@ -361,7 +484,7 @@ cJSON* DescribeMObj(mobj_t *obj)
         cJSON_AddNumberToObject(root, "attacking", obj->target->id);
     }
 
-    cJSON *flags = cJSON_CreateObject();
+    flags = cJSON_CreateObject();
     if (obj->flags & MF_SPECIAL) cJSON_AddTrueToObject(flags, "MF_SPECIAL");
     if (obj->flags & MF_SOLID) cJSON_AddTrueToObject(flags, "MF_SOLID");
     if (obj->flags & MF_SHOOTABLE) cJSON_AddTrueToObject(flags, "MF_SHOOTABLE");

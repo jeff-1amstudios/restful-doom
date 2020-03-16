@@ -190,7 +190,7 @@ P_PathTraverse
   fixed_t	y2,
   int		flags,
   boolean	(*trav) (intercept_t *));
-
+boolean PTR_AimTraverse (intercept_t* in);
 void P_UnsetThingPosition (mobj_t* thing);
 void P_SetThingPosition (mobj_t* thing);
 
