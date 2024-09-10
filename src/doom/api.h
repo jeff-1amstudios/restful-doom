@@ -7,11 +7,13 @@
 
 #include "p_local.h"
 #include "m_fixed.h"
+#include "m_argv.h"
 
 #define NUMKEYS   256
 #define NUMDESCRIPTIONS 125
 
 int keys_down[NUMKEYS];
+int target_angle;
 
 void API_Init(int port);
 void API_RunIO();
@@ -20,7 +22,7 @@ fixed_t API_FloatToFixed(float val);
 cJSON* DescribeMObj(mobj_t *obj);
 void API_SetHUDMessage(char *msg);
 void API_FlipFlag(int *flags, int mask, boolean on);
-
+void turnPlayer();
 
 typedef struct {
   int id;

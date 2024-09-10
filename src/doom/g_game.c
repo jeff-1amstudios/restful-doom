@@ -158,7 +158,7 @@ fixed_t         forwardmove[2] = {0x19, 0x32};
 fixed_t         sidemove[2] = {0x18, 0x28}; 
 fixed_t         angleturn[3] = {640, 1280, 320};    // + slow turn 
 
-static int *weapon_keys[] = {
+int *weapon_keys[] = {
     &key_weapon1,
     &key_weapon2,
     &key_weapon3,
@@ -830,8 +830,8 @@ boolean G_Responder (event_t* ev)
 		 
       case ev_mouse: 
         SetMouseButtons(ev->data1);
-	mousex = ev->data2*(mouseSensitivity+5)/10; 
-	mousey = ev->data3*(mouseSensitivity+5)/10; 
+	mousex = ev->data2*(mouseSensitivity+5)/10;
+	mousey = ev->data3*(mouseSensitivity+5)/10;
 	return true;    // eat events 
  
       case ev_joystick: 

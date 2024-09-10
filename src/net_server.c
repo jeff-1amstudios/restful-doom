@@ -29,7 +29,6 @@
 #include "m_misc.h"
 
 #include "net_client.h"
-#include "net_common.h"
 #include "net_defs.h"
 #include "net_io.h"
 #include "net_loop.h"
@@ -64,66 +63,6 @@ typedef enum
     SERVER_IN_GAME,
 } net_server_state_t;
 
-typedef struct
-{
-    boolean active;
-    int player_number;
-    net_addr_t *addr;
-    net_connection_t connection;
-    int last_send_time;
-    char *name;
-
-    // If true, the client has sent the NET_PACKET_TYPE_GAMESTART
-    // message indicating that it is ready for the game to start.
-
-    boolean ready;
-
-    // Time that this client connected to the server.
-    // This is used to determine the controller (oldest client).
-
-    unsigned int connect_time;
-
-    // Last time new gamedata was received from this client
-
-    int last_gamedata_time;
-
-    // recording a demo without -longtics
-
-    boolean recording_lowres;
-
-    // send queue: items to send to the client
-    // this is a circular buffer
-
-    int sendseq;
-    net_full_ticcmd_t sendqueue[BACKUPTICS];
-
-    // Latest acknowledged by the client
-
-    unsigned int acknowledged;
-
-    // Value of max_players specified by the client on connect.
-
-    int max_players;
-
-    // Observer: receives data but does not participate in the game.
-
-    boolean drone;
-
-    // SHA1 hash sums of the client's WAD directory and dehacked data
-
-    sha1_digest_t wad_sha1sum;
-    sha1_digest_t deh_sha1sum;
-
-    // Is this client is playing with the Freedoom IWAD?
-
-    unsigned int is_freedoom;
-
-    // Player class (for Hexen)
-
-    int player_class;
-
-} net_client_t;
-
 // structure used for the recv window
 
 typedef struct 
@@ -148,7 +87,7 @@ typedef struct
 static net_server_state_t server_state;
 static boolean server_initialized = false;
 static net_client_t clients[MAXNETNODES];
-static net_client_t *sv_players[NET_MAXPLAYERS];
+net_client_t *sv_players[NET_MAXPLAYERS];
 static net_context_t *server_context;
 static unsigned int sv_gamemode;
 static unsigned int sv_gamemission;
