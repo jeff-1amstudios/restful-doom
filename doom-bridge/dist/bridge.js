@@ -9,7 +9,7 @@
  * - Natural language descriptions
  */
 import { DoomApiClient } from "./api-client.js";
-import { describeEnvironment, describePlayerStatus, generateStatusUpdate, describeWeapon, } from "./semantics.js";
+import { describeEnvironment, describePlayerStatus, generateStatusUpdate, describeWeapon, generateAudioCues, describeAudioCues, computeDistance, computeDistanceBucket, computeRelativeDirection, } from "./semantics.js";
 const DEFAULT_CONFIG = {
     host: "localhost",
     port: 6666,
@@ -297,6 +297,170 @@ export class DoomBridge {
     async canMoveTo(x, y) {
         const player = await this.client.getPlayer();
         return this.client.testMove(player.id, x, y);
+    }
+    // ==========================================================================
+    // Raycast / Wall Detection
+    // ==========================================================================
+    /**
+     * Cast a ray from the player's position in a specific direction to find wall distance.
+     * Uses movetest to probe incrementally.
+     * @param angle Optional angle to cast ray (defaults to player's facing angle)
+     * @param maxDistance Maximum distance to probe (default 1024)
+     * @param stepSize Step size for probing (default 64)
+     */
+    async raycast(angle, maxDistance = 1024, stepSize = 64) {
+        const player = await this.client.getPlayer();
+        const castAngle = angle ?? player.angle;
+        // Convert angle to radians
+        const rad = (castAngle * Math.PI) / 180;
+        let distance = 0;
+        let blocked = false;
+        // Probe in steps until we hit something or reach max distance
+        while (distance < maxDistance) {
+            distance += stepSize;
+            const probeX = player.position.x + Math.cos(rad) * distance;
+            const probeY = player.position.y + Math.sin(rad) * distance;
+            const canMove = await this.client.testMove(player.id, probeX, probeY);
+            if (!canMove) {
+                blocked = true;
+                break;
+            }
+        }
+        const distanceBucket = computeDistanceBucket(distance);
+        // Generate description
+        let description;
+        if (!blocked) {
+            description = "Open space ahead, no walls in range";
+        }
+        else if (distance <= 64) {
+            description = "Wall right in front of you!";
+        }
+        else if (distance <= 128) {
+            description = "Wall very close ahead";
+        }
+        else if (distance <= 256) {
+            description = "Wall a few steps ahead";
+        }
+        else if (distance <= 512) {
+            description = "Wall visible ahead";
+        }
+        else {
+            description = "Wall in the distance";
+        }
+        return {
+            distance,
+            distanceBucket,
+            blocked,
+            description,
+        };
+    }
+    /**
+     * Get wall distances in all cardinal directions relative to player facing.
+     */
+    async getSurroundings() {
+        const player = await this.client.getPlayer();
+        const baseAngle = player.angle;
+        // Cast rays in 4 directions
+        const [ahead, right, behind, left] = await Promise.all([
+            this.raycast(baseAngle, 1024, 64),
+            this.raycast((baseAngle + 270) % 360, 1024, 64), // Right is -90 degrees
+            this.raycast((baseAngle + 180) % 360, 1024, 64),
+            this.raycast((baseAngle + 90) % 360, 1024, 64),
+        ]);
+        // Generate summary
+        const parts = [];
+        if (ahead.blocked && ahead.distance <= 256) {
+            parts.push(`wall ${ahead.distanceBucket} ahead`);
+        }
+        if (left.blocked && left.distance <= 256) {
+            parts.push(`wall ${left.distanceBucket} to left`);
+        }
+        if (right.blocked && right.distance <= 256) {
+            parts.push(`wall ${right.distanceBucket} to right`);
+        }
+        if (behind.blocked && behind.distance <= 256) {
+            parts.push(`wall ${behind.distanceBucket} behind`);
+        }
+        const summary = parts.length > 0
+            ? `Walls: ${parts.join(", ")}`
+            : "Open area, no close walls";
+        return {
+            ahead: { distance: ahead.distance, description: ahead.description },
+            behind: { distance: behind.distance, description: behind.description },
+            left: { distance: left.distance, description: left.description },
+            right: { distance: right.distance, description: right.description },
+            summary,
+        };
+    }
+    // ==========================================================================
+    // Turn Toward Object
+    // ==========================================================================
+    /**
+     * Calculate the angle from player to an object.
+     */
+    async getAngleToObject(objectId) {
+        const [player, object] = await Promise.all([
+            this.client.getPlayer(),
+            this.client.getObject(objectId),
+        ]);
+        const dx = object.position.x - player.position.x;
+        const dy = object.position.y - player.position.y;
+        // Calculate absolute angle to object
+        const angleToObject = (Math.atan2(dy, dx) * 180) / Math.PI;
+        const normalizedAngle = (angleToObject + 360) % 360;
+        // Calculate direction relative to player
+        const direction = computeRelativeDirection(player.position.x, player.position.y, player.angle, object.position.x, object.position.y);
+        const distance = computeDistance(player.position.x, player.position.y, object.position.x, object.position.y);
+        return {
+            angle: Math.round(normalizedAngle),
+            direction,
+            distance: Math.round(distance),
+        };
+    }
+    /**
+     * Turn to face a specific object by ID.
+     */
+    async turnToward(objectId) {
+        try {
+            const angleInfo = await this.getAngleToObject(objectId);
+            await this.client.turn(angleInfo.angle);
+            return {
+                success: true,
+                message: `Turning to face object ${objectId} (${angleInfo.direction}, ${computeDistanceBucket(angleInfo.distance)})`,
+                targetAngle: angleInfo.angle,
+            };
+        }
+        catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            return {
+                success: false,
+                message: `Failed to turn toward object: ${message}`,
+                targetAngle: 0,
+            };
+        }
+    }
+    // ==========================================================================
+    // Audio Cues
+    // ==========================================================================
+    /**
+     * Get simulated audio cues based on nearby enemies.
+     */
+    async getAudioCues() {
+        const [player, objects] = await Promise.all([
+            this.client.getPlayer(),
+            this.client.getObjects(this.config.objectDistance),
+        ]);
+        return generateAudioCues(player, objects);
+    }
+    /**
+     * Get a natural language description of what the player "hears".
+     */
+    async describeAudio() {
+        const [player, objects] = await Promise.all([
+            this.client.getPlayer(),
+            this.client.getObjects(this.config.objectDistance),
+        ]);
+        return describeAudioCues(player, objects);
     }
     // ==========================================================================
     // HUD Messages

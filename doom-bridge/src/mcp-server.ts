@@ -11,8 +11,12 @@
  * - doom_describe_environment: Get natural language environment description
  * - doom_perform_action: Execute a player action
  * - doom_turn_to: Turn to face a specific angle
+ * - doom_turn_toward: Turn to face a specific object by ID
  * - doom_can_see: Check line of sight to an object
  * - doom_show_message: Display a HUD message
+ * - doom_get_audio_cues: Get simulated audio cues from nearby enemies
+ * - doom_raycast: Cast ray to detect wall distance
+ * - doom_get_surroundings: Get wall distances in all directions
  */
 
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
@@ -122,6 +126,23 @@ const TOOLS: Tool[] = [
     },
   },
   {
+    name: "doom_turn_toward",
+    description:
+      "Turn to face a specific object by its ID. " +
+      "Automatically calculates the angle to the object and turns to face it. " +
+      "Useful for targeting enemies or navigating toward pickups.",
+    inputSchema: {
+      type: "object" as const,
+      properties: {
+        objectId: {
+          type: "number",
+          description: "The ID of the object to turn toward",
+        },
+      },
+      required: ["objectId"],
+    },
+  },
+  {
     name: "doom_can_see",
     description:
       "Check if you have line of sight to a specific object by ID. " +
@@ -152,6 +173,52 @@ const TOOLS: Tool[] = [
         },
       },
       required: ["message"],
+    },
+  },
+  {
+    name: "doom_get_audio_cues",
+    description:
+      "Get simulated audio cues based on nearby enemies. " +
+      "Returns what the player would 'hear' - enemy sounds, movement, attacks. " +
+      "Each cue includes description, direction, distance, and urgency level. " +
+      "Great for spatial awareness when enemies are behind you or out of sight.",
+    inputSchema: {
+      type: "object" as const,
+      properties: {},
+      required: [],
+    },
+  },
+  {
+    name: "doom_raycast",
+    description:
+      "Cast a ray to detect wall distance in a specific direction. " +
+      "Useful for understanding the room layout and avoiding walls. " +
+      "Returns distance to wall, bucket (very close/close/near/far), and description.",
+    inputSchema: {
+      type: "object" as const,
+      properties: {
+        angle: {
+          type: "number",
+          minimum: 0,
+          maximum: 359,
+          description:
+            "Direction to cast ray in degrees (0-359). If not specified, uses player's facing direction. " +
+            "0=East, 90=North, 180=West, 270=South.",
+        },
+      },
+      required: [],
+    },
+  },
+  {
+    name: "doom_get_surroundings",
+    description:
+      "Get wall distances in all four cardinal directions relative to player facing. " +
+      "Returns distances ahead, behind, left, and right plus a summary. " +
+      "Useful for understanding the room layout and navigating tight spaces.",
+    inputSchema: {
+      type: "object" as const,
+      properties: {},
+      required: [],
     },
   },
 ];
@@ -343,6 +410,77 @@ async function main() {
               {
                 type: "text" as const,
                 text: JSON.stringify({ success: true, message }),
+              },
+            ],
+          };
+        }
+
+        case "doom_turn_toward": {
+          const objectId = args?.objectId as number;
+
+          if (objectId === undefined) {
+            return {
+              content: [
+                { type: "text" as const, text: "Error: objectId is required" },
+              ],
+              isError: true,
+            };
+          }
+
+          const result = await bridge.turnToward(objectId);
+          return {
+            content: [
+              {
+                type: "text" as const,
+                text: JSON.stringify(result),
+              },
+            ],
+            isError: !result.success,
+          };
+        }
+
+        case "doom_get_audio_cues": {
+          const cues = await bridge.getAudioCues();
+          const summary = await bridge.describeAudio();
+          return {
+            content: [
+              {
+                type: "text" as const,
+                text: JSON.stringify(
+                  {
+                    cues,
+                    summary,
+                    cueCount: cues.length,
+                  },
+                  null,
+                  2
+                ),
+              },
+            ],
+          };
+        }
+
+        case "doom_raycast": {
+          const angle = args?.angle as number | undefined;
+
+          const result = await bridge.raycast(angle);
+          return {
+            content: [
+              {
+                type: "text" as const,
+                text: JSON.stringify(result, null, 2),
+              },
+            ],
+          };
+        }
+
+        case "doom_get_surroundings": {
+          const surroundings = await bridge.getSurroundings();
+          return {
+            content: [
+              {
+                type: "text" as const,
+                text: JSON.stringify(surroundings, null, 2),
               },
             ],
           };

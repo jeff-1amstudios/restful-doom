@@ -635,3 +635,186 @@ export function generateStatusUpdate(
 
   return parts.join(" ");
 }
+
+// ============================================================================
+// Audio Cue Generation (Simulated)
+// ============================================================================
+
+/**
+ * Sound descriptions for different enemy types.
+ */
+const ENEMY_SOUNDS: Record<string, { idle: string; attack: string; move: string }> = {
+  "FORMER HUMAN": { idle: "shuffling", attack: "gunfire", move: "footsteps" },
+  "FORMER HUMAN SERGEANT": { idle: "shuffling", attack: "shotgun blast", move: "footsteps" },
+  "HEAVY WEAPON DUDE": { idle: "mechanical whirring", attack: "chaingun fire", move: "heavy footsteps" },
+  "IMP": { idle: "snarling", attack: "screeching", move: "scratching claws" },
+  "DEMON": { idle: "growling", attack: "roaring", move: "heavy thudding" },
+  "SPECTRE": { idle: "faint growling", attack: "roaring", move: "barely audible movement" },
+  "LOST SOUL": { idle: "wailing", attack: "screaming", move: "whooshing" },
+  "CACODEMON": { idle: "gurgling", attack: "spitting", move: "floating hum" },
+  "HELL KNIGHT": { idle: "grunting", attack: "roaring", move: "heavy footsteps" },
+  "BARON OF HELL": { idle: "deep grunting", attack: "bellowing", move: "thundering footsteps" },
+  "ARACHNOTRON": { idle: "mechanical clicking", attack: "plasma discharge", move: "skittering legs" },
+  "PAIN ELEMENTAL": { idle: "moaning", attack: "shrieking", move: "floating whoosh" },
+  "REVENANT": { idle: "rattling bones", attack: "missile launch", move: "clattering" },
+  "MANCUBUS": { idle: "wheezing", attack: "flame burst", move: "lumbering footsteps" },
+  "ARCH-VILE": { idle: "crackling energy", attack: "infernal screaming", move: "swift movement" },
+  "SPIDER MASTERMIND": { idle: "mechanical humming", attack: "chaingun roar", move: "massive legs pounding" },
+  "CYBER-DEMON": { idle: "mechanical breathing", attack: "rocket launch", move: "earth-shaking footsteps" },
+};
+
+/**
+ * Get sound description for an enemy type.
+ */
+function getEnemySound(type: string, soundType: "idle" | "attack" | "move"): string {
+  const sounds = ENEMY_SOUNDS[type.toUpperCase()];
+  if (sounds) {
+    return sounds[soundType];
+  }
+  // Generic fallback
+  return soundType === "idle" ? "growling" : soundType === "attack" ? "attacking" : "movement";
+}
+
+export interface AudioCue {
+  description: string;
+  direction: RelativeDirection;
+  distance: DistanceBucket;
+  urgency: "low" | "medium" | "high" | "critical";
+  sourceType: string;
+}
+
+/**
+ * Generate simulated audio cues based on nearby enemies.
+ * Uses distance, direction, and attacking status to simulate what the player would "hear".
+ */
+export function generateAudioCues(
+  player: Player,
+  objects: MapObject[]
+): AudioCue[] {
+  const cues: AudioCue[] = [];
+
+  // Filter to living enemies within audio range (1024 units - can hear but not necessarily see)
+  const enemies = objects.filter((obj) => {
+    if (!isEnemy(obj) || !isAlive(obj)) return false;
+    const distance = obj.distance ?? computeDistance(
+      player.position.x,
+      player.position.y,
+      obj.position.x,
+      obj.position.y
+    );
+    return distance <= 1024;
+  });
+
+  // Sort by distance (closest first)
+  enemies.sort((a, b) => {
+    const distA = a.distance ?? computeDistance(player.position.x, player.position.y, a.position.x, a.position.y);
+    const distB = b.distance ?? computeDistance(player.position.x, player.position.y, b.position.x, b.position.y);
+    return distA - distB;
+  });
+
+  for (const enemy of enemies) {
+    const distance = enemy.distance ?? computeDistance(
+      player.position.x,
+      player.position.y,
+      enemy.position.x,
+      enemy.position.y
+    );
+    const distanceBucket = computeDistanceBucket(distance);
+    const direction = computeRelativeDirection(
+      player.position.x,
+      player.position.y,
+      player.angle,
+      enemy.position.x,
+      enemy.position.y
+    );
+
+    // Determine if enemy is attacking the player
+    const isAttacking = enemy.attacking === player.id;
+
+    // Determine sound type based on context
+    let soundType: "idle" | "attack" | "move" = "idle";
+    if (isAttacking) {
+      soundType = "attack";
+    } else if (distance < 512) {
+      // Close enemies are "moving toward you"
+      soundType = "move";
+    }
+
+    const sound = getEnemySound(enemy.type, soundType);
+    const friendlyName = getFriendlyName(enemy.type);
+
+    // Determine urgency
+    let urgency: "low" | "medium" | "high" | "critical" = "low";
+    const threat = getThreatLevel(enemy);
+
+    if (isAttacking && distance < 256) {
+      urgency = "critical";
+    } else if (isAttacking || (threat === "extreme" && distance < 512)) {
+      urgency = "high";
+    } else if (distance < 256 || threat === "high") {
+      urgency = "medium";
+    }
+
+    // Generate natural language description
+    let description: string;
+    const directionText = direction.replace("-", " ");
+
+    if (isAttacking && distance < 256) {
+      description = `${friendlyName} ${sound} right ${directionText}!`;
+    } else if (isAttacking) {
+      description = `You hear ${sound} from ${directionText} - ${friendlyName} attacking!`;
+    } else if (direction.includes("behind") && distance < 512) {
+      description = `You hear ${sound} behind you, ${distanceBucket}`;
+    } else if (distance < 256) {
+      description = `${friendlyName} ${sound} ${directionText}, ${distanceBucket}`;
+    } else {
+      description = `You hear ${sound} ${directionText}, ${distanceBucket}`;
+    }
+
+    cues.push({
+      description,
+      direction,
+      distance: distanceBucket,
+      urgency,
+      sourceType: enemy.type,
+    });
+  }
+
+  // Add ambient cues for multiple enemies
+  if (enemies.length >= 3) {
+    const behindCount = enemies.filter((e) => {
+      const dir = computeRelativeDirection(
+        player.position.x, player.position.y, player.angle,
+        e.position.x, e.position.y
+      );
+      return dir.includes("behind");
+    }).length;
+
+    if (behindCount >= 2) {
+      cues.unshift({
+        description: "Multiple hostiles moving behind you!",
+        direction: "behind",
+        distance: "near",
+        urgency: "high",
+        sourceType: "multiple",
+      });
+    }
+  }
+
+  // Limit to most relevant cues
+  return cues.slice(0, 5);
+}
+
+/**
+ * Generate a summary of audio cues as a single string.
+ */
+export function describeAudioCues(player: Player, objects: MapObject[]): string {
+  const cues = generateAudioCues(player, objects);
+
+  if (cues.length === 0) {
+    return "All quiet. No hostile sounds detected.";
+  }
+
+  const descriptions = cues.map((c) => c.description);
+  return descriptions.join(" ");
+}

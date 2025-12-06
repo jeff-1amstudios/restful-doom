@@ -8,6 +8,7 @@
  * - Event monitoring (health changes, level transitions)
  * - Natural language descriptions
  */
+import { type AudioCue } from "./semantics.js";
 import type { Player, World, MapObject, Door, DoomState, EnvironmentDescription, PlayerActionType, DoomEventHandler, DoomEventType } from "./types.js";
 export interface DoomBridgeConfig {
     host?: string;
@@ -139,6 +140,65 @@ export declare class DoomBridge {
      * Check if we can move to a position.
      */
     canMoveTo(x: number, y: number): Promise<boolean>;
+    /**
+     * Cast a ray from the player's position in a specific direction to find wall distance.
+     * Uses movetest to probe incrementally.
+     * @param angle Optional angle to cast ray (defaults to player's facing angle)
+     * @param maxDistance Maximum distance to probe (default 1024)
+     * @param stepSize Step size for probing (default 64)
+     */
+    raycast(angle?: number, maxDistance?: number, stepSize?: number): Promise<{
+        distance: number;
+        distanceBucket: string;
+        blocked: boolean;
+        description: string;
+    }>;
+    /**
+     * Get wall distances in all cardinal directions relative to player facing.
+     */
+    getSurroundings(): Promise<{
+        ahead: {
+            distance: number;
+            description: string;
+        };
+        behind: {
+            distance: number;
+            description: string;
+        };
+        left: {
+            distance: number;
+            description: string;
+        };
+        right: {
+            distance: number;
+            description: string;
+        };
+        summary: string;
+    }>;
+    /**
+     * Calculate the angle from player to an object.
+     */
+    getAngleToObject(objectId: number): Promise<{
+        angle: number;
+        direction: string;
+        distance: number;
+    }>;
+    /**
+     * Turn to face a specific object by ID.
+     */
+    turnToward(objectId: number): Promise<{
+        success: boolean;
+        message: string;
+        targetAngle: number;
+    }>;
+    /**
+     * Get simulated audio cues based on nearby enemies.
+     */
+    getAudioCues(): Promise<AudioCue[]>;
+    /**
+     * Get a natural language description of what the player "hears".
+     */
+    describeAudio(): Promise<string>;
     /**
      * Display a message on the player's HUD.
      */

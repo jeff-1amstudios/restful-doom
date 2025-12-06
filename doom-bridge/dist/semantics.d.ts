@@ -61,4 +61,20 @@ export declare function generateStatusUpdate(player: Player, objects: MapObject[
     episode: number;
     map: number;
 }): string;
+export interface AudioCue {
+    description: string;
+    direction: RelativeDirection;
+    distance: DistanceBucket;
+    urgency: "low" | "medium" | "high" | "critical";
+    sourceType: string;
+}
+/**
+ * Generate simulated audio cues based on nearby enemies.
+ * Uses distance, direction, and attacking status to simulate what the player would "hear".
+ */
+export declare function generateAudioCues(player: Player, objects: MapObject[]): AudioCue[];
+/**
+ * Generate a summary of audio cues as a single string.
+ */
+export declare function describeAudioCues(player: Player, objects: MapObject[]): string;
 //# sourceMappingURL=semantics.d.ts.map
