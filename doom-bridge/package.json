@@ -1,0 +1,25 @@
+{
+  "name": "doom-bridge",
+  "version": "1.0.0",
+  "description": "Bridge service between restful-doom and AI agents (MCP/OpenAI Realtime)",
+  "main": "dist/index.js",
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "tsx watch src/index.ts",
+    "mcp": "node dist/mcp-server.js",
+    "test": "tsx src/test-client.ts"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "tsx": "^4.7.0",
+    "typescript": "^5.3.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
