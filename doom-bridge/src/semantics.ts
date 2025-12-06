@@ -363,7 +363,10 @@ export function describeObjectGroup(
   objects: SemanticObject[],
   category: ObjectCategory
 ): string[] {
-  const filtered = objects.filter((o) => o.category === category && isAlive(o));
+  // Only apply isAlive check for enemies - pickup items don't have health or MF_SHOOTABLE flag
+  const filtered = objects.filter((o) => 
+    o.category === category && (category !== "enemy" || isAlive(o))
+  );
   if (filtered.length === 0) return [];
 
   // Group by type and direction for conciseness
